@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  triton:
+    image: nvcr.io/nvidia/tritonserver:25.06-py3
+    command: tritonserver --model-repository=/models
+    volumes:
+      - ../model_repository:/models
+    shm_size: 1g
