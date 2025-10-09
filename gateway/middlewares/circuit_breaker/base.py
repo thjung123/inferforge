@@ -1,12 +1,14 @@
 import time
+from typing import Optional
 
 
 class CircuitBreaker:
-    def __init__(self, failure_threshold=5, recovery_time=30):
+    def __init__(self, name: str, failure_threshold: int = 5, recovery_time: int = 30):
+        self.name = name
         self.failure_threshold = failure_threshold
         self.recovery_time = recovery_time
         self.fail_count = 0
-        self.last_failure = 0
+        self.last_failure: Optional[float] = None
         self.open = False
 
     def record_failure(self):
@@ -15,10 +17,10 @@ class CircuitBreaker:
         if self.fail_count >= self.failure_threshold:
             self.open = True
 
-    def allow_request(self):
+    def allow_request(self) -> bool:
         if not self.open:
             return True
-        if time.time() - self.last_failure > self.recovery_time:
+        if self.last_failure and time.time() - self.last_failure > self.recovery_time:
             self.open = False
             self.fail_count = 0
             return True
