@@ -3,17 +3,20 @@
 
 ```
         [Client]
-            ↓ (REST API)
+            ↓  (REST API)
     [ FastAPI Gateway ]
         ├─ Auth, Rate Limiter
         ├─ Request Validation
         ├─ Retry / Circuit Breaker
         └─ gRPC/HTTP → Triton Client
-            ↓ (gRPC)
+            ↓  (gRPC)
     [ Triton Server ]
         ├─ Preprocessor (Python backend)
         ├─ TensorRT Inference Engine
         └─ Postprocessor (Python backend)
-            ↓
+            ↓  (gRPC)
+    [ FastAPI Gateway ]
+        ├─ Response Formatter
+            ↓  (REST API)
         [ Response ]
 ```
