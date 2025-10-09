@@ -1,14 +1,4 @@
-version: "3.8"
 services:
-  gateway:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.gateway
-    ports:
-      - "8000:8000"
-    depends_on:
-      - redis
-
   redis:
     image: redis:7-alpine
     ports:
@@ -20,3 +10,21 @@ services:
     volumes:
       - ../model_repository:/models
     shm_size: 1g
+    ports:
+      - "8001:8001"
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gateway
+      args:
+        MODE: prod
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - API_KEY_WHITELIST=["test-key"]
+      - TRITON_URL=http://triton:8001
+    depends_on:
+      - redis
+      - triton
