@@ -8,6 +8,13 @@ _log_queue: Optional[Queue] = None
 _listener: Optional[QueueListener] = None
 
 
+class SafeFormatter(logging.Formatter):
+    def format(self, record):
+        if not hasattr(record, "request_id"):
+            record.request_id = "-"
+        return super().format(record)
+
+
 def setup_async_logger(
     name: str = "gateway", level: int = logging.INFO
 ) -> logging.Logger:
@@ -18,11 +25,8 @@ def setup_async_logger(
 
         stream_handler = logging.StreamHandler(sys.stdout)
         stream_handler.setFormatter(
-            logging.Formatter(
-                "[%(asctime)s] [%(levelname)s] [%(name)s] [%(request_id)s] %(message)s"
-            )
+            SafeFormatter("[%(asctime)s] [%(levelname)s] [%(request_id)s] %(message)s")
         )
-
         _listener = QueueListener(
             _log_queue, stream_handler, respect_handler_level=True
         )
