@@ -31,5 +31,3 @@ services:
     depends_on:
       - redis
       - triton
-    env_file:
-      - .env
