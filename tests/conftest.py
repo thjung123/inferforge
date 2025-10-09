@@ -14,13 +14,18 @@ os.environ.setdefault("API_KEY_WHITELIST", '["test-key"]')
 class FakeRedis:
     def __init__(self):
         self.counter = 0
+        self.expire_calls = {}
 
     async def incr(self, key):
         self.counter += 1
         return self.counter
 
     async def expire(self, key, ttl):
-        pass
+        self.expire_calls[key] = ttl
+
+    async def eval(self, script, num_keys, key, window):
+        self.counter += 1
+        return str(self.counter)
 
     async def close(self):
         pass
