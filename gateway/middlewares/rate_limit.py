@@ -9,7 +9,7 @@ RATE_WINDOW = int(os.getenv("RATE_WINDOW", 3))
 
 
 async def rate_limiter(request: Request, call_next):
-    client_ip = request.client.host
+    client_ip = request.client.host if request.client else "unknown"
     key = f"rate:{client_ip}"
 
     try:
