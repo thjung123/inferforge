@@ -1,7 +1,6 @@
-from pydantic import BaseModel
-from typing import Dict, Any
+from pydantic import BaseModel, Field
 
 
 class InferenceResponse(BaseModel):
-    status: str
-    outputs: Dict[str, Any]
+    class_: str = Field(alias="class")
+    confidence: float
