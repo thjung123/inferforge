@@ -4,13 +4,13 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from httpx import AsyncClient, ASGITransport
 from gateway.middlewares.circuit_breaker.manager import breaker_manager
-from gateway.middlewares.circuit_breaker_middleware import CircuitBreakerMiddleware
+from gateway.middlewares.circuit_breaker.middleware import circuit_breaker_middleware
 
 
 @pytest.fixture
 def mock_app():
     app = FastAPI()
-    app.add_middleware(CircuitBreakerMiddleware)  # type: ignore[arg-type]
+    app.middleware("http")(circuit_breaker_middleware)
 
     @app.get("/ok")
     async def ok_route():

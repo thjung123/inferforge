@@ -17,6 +17,11 @@ class CircuitBreaker:
         if self.fail_count >= self.failure_threshold:
             self.open = True
 
+    def record_success(self):
+        self.fail_count = 0
+        self.open = False
+        self.last_failure = None
+
     def allow_request(self) -> bool:
         if not self.open:
             return True

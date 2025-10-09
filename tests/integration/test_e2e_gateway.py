@@ -26,6 +26,7 @@ def test_health_check():
     resp = requests.get(f"{BASE_URL}/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
+    time.sleep(1)
 
 
 def test_version_endpoint():
@@ -36,6 +37,7 @@ def test_version_endpoint():
     assert "version" in body
     assert "commit" in body
     assert "build_time" in body
+    time.sleep(1)
 
 
 def test_inference_endpoint():
@@ -46,3 +48,4 @@ def test_inference_endpoint():
     body = resp.json()
     assert "class" in body
     assert "confidence" in body
+    time.sleep(1)

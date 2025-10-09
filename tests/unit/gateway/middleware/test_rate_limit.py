@@ -1,5 +1,7 @@
+import json
+
 import pytest
-from fastapi import Request, HTTPException
+from fastapi import Request
 from gateway.middlewares.rate_limit import rate_limiter
 
 
@@ -26,8 +28,7 @@ async def test_rate_limit_exceeded(monkeypatch):
     async def call_next(req):
         return "ok"
 
-    with pytest.raises(HTTPException) as exc_info:
-        await rate_limiter(req, call_next)
-
-    assert exc_info.value.status_code == 429
-    assert exc_info.value.detail == "Rate limit exceeded"
+    resp = await rate_limiter(req, call_next)
+    assert resp.status_code == 429
+    data = json.loads(resp.body)
+    assert data["detail"] == "Rate limit exceeded"

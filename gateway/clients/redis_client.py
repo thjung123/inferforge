@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import Optional
 from redis.asyncio import Redis
 from gateway.config import get_settings
 from gateway.middlewares.circuit_breaker.manager import breaker_manager
@@ -39,16 +39,14 @@ class RedisClient:
             logger.info("[RedisClient] Redis connection closed")
             cls._instance = None
 
-    async def incr(self, key: str) -> int:
+    @classmethod
+    async def incr(cls, key: str) -> int:
         redis_breaker = breaker_manager.get("redis")
 
         if not redis_breaker.allow_request():
             logger.warning("[RedisBreaker] Circuit open - skipping incr")
             raise ConnectionError("Redis circuit open")
 
-        if self._instance is None:
-            raise RuntimeError("[RedisClient] Redis instance is not initialized")
-
-        redis = cast(Redis, self._instance)
+        redis = await cls.get_instance()
         result = await redis.incr(key)
         return result

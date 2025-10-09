@@ -11,6 +11,9 @@ REQUEST_LATENCY = Histogram(
 
 
 async def metrics_middleware(request: Request, call_next):
+    if request.url.path.startswith("/health"):
+        return await call_next(request)
+
     start = time()
     response = await call_next(request)
     duration = time() - start
