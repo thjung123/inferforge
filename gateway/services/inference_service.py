@@ -23,7 +23,7 @@ class InferenceService:
         processed = preprocess_inputs(inputs)
 
         try:
-            raw_result = self.client.infer(model_name, processed)
+            raw_result = await self.client.infer(model_name, processed)
         except TimeoutError:
             logger.error(f"Triton timeout | model={model_name}")
             raise TritonConnectionError("Triton inference timed out")
