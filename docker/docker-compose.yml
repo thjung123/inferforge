@@ -2,18 +2,18 @@ services:
   redis:
     container_name: redis
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
 
-  triton:
-    container_name: triton
-    image: nvcr.io/nvidia/tritonserver:25.06-py3
-    command: tritonserver --model-repository=/models
-    volumes:
-      - ../model_repository:/models
-    shm_size: 1g
-    ports:
-      - "8001:8001"
+#  triton:
+#    container_name: triton
+#    image: nvcr.io/nvidia/tritonserver:25.06-py3
+#    command: tritonserver --model-repository=/models
+#    volumes:
+#      - ../model_repository:/models
+#    shm_size: 1g
+#    ports:
+#      - "8001:8001"
 
   gateway:
     container_name: gateway
@@ -30,4 +30,4 @@ services:
       - TRITON_URL=http://triton:8001
     depends_on:
       - redis
-      - triton
+#      - triton

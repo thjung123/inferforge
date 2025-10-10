@@ -29,13 +29,12 @@ def setup_environment():
 
 def test_rate_limiter_blocks_excessive_requests():
     success, blocked = 0, 0
-    for i in range(10):
+    for i in range(30):
         resp = requests.get(f"{BASE_URL}/health", headers=HEADERS)
         if resp.status_code == 200:
             success += 1
         elif resp.status_code == 429:
             blocked += 1
-        time.sleep(0.001)
     assert blocked > 0, f"Rate limiter did not block any requests (Allowed={success})"
     time.sleep(3)
 

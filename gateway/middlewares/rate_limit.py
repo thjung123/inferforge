@@ -11,7 +11,7 @@ RATE_WINDOW = int(os.getenv("RATE_WINDOW", 3))
 
 
 LUA_SCRIPT = """
-local LUA_SCRIPT = redis.call("INCR", KEYS[1])
+local current = redis.call("INCR", KEYS[1])
 if tonumber(current) == 1 then
   redis.call("EXPIRE", KEYS[1], ARGV[1])
 end
