@@ -1,0 +1,20 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir uv
+COPY . .
+RUN uv pip install --system .
+
+ENV WORKERS=1
+ENV THREADS=2
+ENV TIMEOUT=120
+ENV HOST=0.0.0.0
+ENV PORT=8000
+
+CMD gunicorn gateway.main:app \
+    -k uvicorn.workers.UvicornWorker \
+    --bind ${HOST}:${PORT} \
+    --workers ${WORKERS} \
+    --threads ${THREADS} \
+    --timeout ${TIMEOUT}

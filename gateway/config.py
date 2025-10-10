@@ -1,0 +1,16 @@
+from functools import lru_cache
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    triton_url: str = "http://localhost:8001"
+    redis_url: str = "redis://localhost:6379"
+    jwt_secret: str = "default_secret"
+    api_key_whitelist: list[str] = []
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()
