@@ -1,0 +1,28 @@
+model_name: clip_text_encoder
+framework: pytorch
+
+paths:
+  source_model: "weights/clip_text_encoder.pt"
+  onnx_model: "model_repository/clip_text_encoder/clip_text_encoder.onnx"
+  engine_model_dir: "model_repository/clip_text_encoder"
+
+inputs:
+  - name: "text"
+    dtype: "int32"
+    shape: [1, 77]
+
+outputs:
+  - name: "text_embedding"
+    dtype: "float32"
+    shape: [1, 512]
+
+precision:
+  default: "fp16"
+  enable_int8: false
+
+triton:
+  backend: "tensorrt"
+  max_batch_size: 4
+  instance_group:
+    - count: 1
+      kind: "KIND_GPU"
