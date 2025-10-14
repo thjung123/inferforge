@@ -14,7 +14,7 @@ repos:
     rev: v1.11.1
     hooks:
       - id: mypy
-        additional_dependencies: [types-requests, types-redis]
+        additional_dependencies: [types-requests, types-redis, types-PyYAML]
 
   - repo: local
     hooks:

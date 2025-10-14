@@ -12,3 +12,9 @@ build/
 docker/.env
 .vscode/
 .idea/
+
+**/*.pt
+
+*.pem
+**/aws_connect.md
+**/Dockerfile.custom-tensorrt

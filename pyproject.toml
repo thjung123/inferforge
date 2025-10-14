@@ -9,6 +9,10 @@ dependencies = [
     "fastapi>=0.118.0",
     "gunicorn>=23.0.0",
     "httpx>=0.28.1",
+    "onnx>=1.19.1",
+    "onnxruntime>=1.23.1",
+    "openai-clip>=1.0.1",
+    "pillow>=11.3.0",
     "prometheus-client>=0.23.1",
     "pydantic-settings>=2.11.0",
     "pyjwt>=2.10.1",
@@ -18,9 +22,11 @@ dependencies = [
     "requests>=2.32.5",
     "setuptools>=80.9.0",
     "tenacity>=9.1.2",
+    "types-pyyaml>=6.0.12.20250915",
     "types-requests>=2.32.4.20250913",
     "uvicorn>=0.37.0",
 ]
+
 
 [dependency-groups]
 dev = [
@@ -31,6 +37,8 @@ dev = [
     "ruff>=0.13.3",
 ]
 
+[tool.mypy]
+ignore_missing_imports = true
 
 [tool.setuptools]
 packages = ["gateway", "model"]

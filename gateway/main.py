@@ -1,3 +1,4 @@
+import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -48,3 +49,11 @@ app.add_exception_handler(RequestValidationError, http_exception_handler)
 app.add_exception_handler(TritonConnectionError, http_exception_handler)
 app.add_exception_handler(InvalidInputError, http_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "gateway.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+    )
