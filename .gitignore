@@ -14,7 +14,7 @@ docker/.env
 .idea/
 
 **/*.pt
-**/weights/
 
 *.pem
 **/aws_connect.md
+**/Dockerfile.custom-tensorrt
