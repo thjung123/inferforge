@@ -17,4 +17,5 @@ docker/.env
 
 *.pem
 **/aws_connect.md
-**/Dockerfile.custom-tensorrt
+**/Dockerfile.custom-*
+**/.plan

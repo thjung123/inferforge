@@ -1,0 +1,26 @@
+name: "bert_encoder"
+platform: "tensorrt_plan"
+max_batch_size: 8
+
+input [
+  { name: "input_ids" data_type: TYPE_INT32 dims: [128] }
+  { name: "attention_mask" data_type: TYPE_INT32 dims: [128] }
+  { name: "token_type_ids" data_type: TYPE_INT32 dims: [128] }
+]
+
+output [
+  { name: "last_hidden_state" data_type: TYPE_FP32 dims: [128, 768] }
+  { name: "pooled_output" data_type: TYPE_FP32 dims: [768] }
+]
+
+instance_group [
+  { kind: KIND_GPU count: 1 }
+]
+
+optimization {
+  execution_accelerators {
+    gpu_execution_accelerator: [
+      { name: "tensorrt" parameters { key: "precision_mode" value: "FP16" } }
+    ]
+  }
+}

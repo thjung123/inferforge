@@ -26,7 +26,7 @@ outputs:
     shape: [1, 768]
 
 precision:
-  default: "fp16"       # choices: fp32, fp16, int8
+  default: "fp16"
   enable_int8: false
 
 dynamic_shapes:
