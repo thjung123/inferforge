@@ -15,14 +15,16 @@ class ClipImagePreprocessor:
         self, session: aiohttp.ClientSession, url: str
     ) -> Union[np.ndarray, None]:
         try:
-            async with session.get(url, timeout=5) as resp:
-                if resp.status != 200:
-                    logger.warning(
-                        f"[Preprocessor] Failed to fetch image: {url} ({resp.status})"
-                    )
-                    return None
-                content = await resp.read()
-                return self._process_image_bytes(content)
+            timeout = aiohttp.ClientTimeout(total=5)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=timeout) as resp:
+                    if resp.status != 200:
+                        logger.warning(
+                            f"[Preprocessor] Failed to fetch image: {url} ({resp.status})"
+                        )
+                        return None
+                    content = await resp.read()
+                    return self._process_image_bytes(content)
         except Exception as e:
             logger.error(f"[Preprocessor] Error fetching image {url}: {e}")
             return None

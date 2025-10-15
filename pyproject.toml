@@ -22,9 +22,9 @@ dependencies = [
     "requests>=2.32.5",
     "setuptools>=80.9.0",
     "tenacity>=9.1.2",
+    "torch>=2.8.0",
     "transformers>=4.57.1",
     "types-pyyaml>=6.0.12.20250915",
-    "types-requests>=2.32.4.20250913",
     "uvicorn>=0.37.0",
 ]
 
@@ -39,7 +39,9 @@ dev = [
 ]
 
 [tool.mypy]
+exclude = "(model_repository/.*/1/|models/scripts/|weights/)"
 ignore_missing_imports = true
+explicit_package_bases = true
 
 [tool.setuptools]
 packages = { find = {} }

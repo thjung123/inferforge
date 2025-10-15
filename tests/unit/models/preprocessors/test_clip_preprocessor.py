@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from model.preprocessors.clip_image_preprocessor import ClipImagePreprocessor
-from model.preprocessors.clip_text_preprocessor import ClipTextPreprocessor
+from models.preprocessors.clip_image_preprocessor import ClipImagePreprocessor
+from models.preprocessors.clip_text_preprocessor import ClipTextPreprocessor
 
 
 @pytest.mark.asyncio

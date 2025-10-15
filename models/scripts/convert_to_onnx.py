@@ -21,7 +21,7 @@ def load_model(model_name: str):
         return model.visual.eval()
 
     else:
-        raise ValueError(f"Unknown model name: {model_name}")
+        raise ValueError(f"Unknown models name: {model_name}")
 
 
 def convert_to_onnx(cfg_path: str, output_dir: Path = Path(".")) -> Path:
@@ -95,8 +95,8 @@ def convert_to_onnx(cfg_path: str, output_dir: Path = Path(".")) -> Path:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Convert PyTorch model to ONNX")
-    parser.add_argument("--config", required=True, help="Path to model YAML config")
+    parser = argparse.ArgumentParser(description="Convert PyTorch models to ONNX")
+    parser.add_argument("--config", required=True, help="Path to models YAML config")
     parser.add_argument("--output", help="Output ONNX directory")
     args = parser.parse_args()
 

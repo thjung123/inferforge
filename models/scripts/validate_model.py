@@ -98,14 +98,14 @@ def infer_trt(engine, input_data: list[np.ndarray]):
 
 
 # ============================================================
-# Torch model utils
+# Torch models utils
 # ============================================================
 
 
 def load_or_create_torchscript(model_path: Path, model_name: str):
     try:
         model = torch.jit.load(model_path)
-        print(f"[INFO] Loaded TorchScript model from {model_path}")
+        print(f"[INFO] Loaded TorchScript models from {model_path}")
         return model
     except Exception:
         print(f"[WARN] {model_path.name} is not TorchScript. Attempting to convert...")
@@ -128,13 +128,13 @@ def load_or_create_torchscript(model_path: Path, model_name: str):
             example = (torch.randn((1, 3, 224, 224)),)
 
         else:
-            raise ValueError(f"Unknown model type: {model_name}")
+            raise ValueError(f"Unknown models type: {model_name}")
 
         model.eval()
         traced = torch.jit.trace(model, example, strict=False)
         ts_path = model_path.parent / f"{model_name}_traced.pt"
         traced.save(ts_path)
-        print(f"[INFO] Saved traced TorchScript model at {ts_path}")
+        print(f"[INFO] Saved traced TorchScript models at {ts_path}")
         return traced
 
 
@@ -161,7 +161,7 @@ def build_dummy_input(cfg):
         return (torch.randn((1, 3, 224, 224)),)
 
     else:
-        raise ValueError(f"Unknown model type: {name}")
+        raise ValueError(f"Unknown models type: {name}")
 
 
 # ============================================================
@@ -181,7 +181,7 @@ def validate(cfg_path):
         else None
     )
     if model is None:
-        print(f"[WARN] No valid model found at {model_path}")
+        print(f"[WARN] No valid models found at {model_path}")
         return
 
     dummy_inputs = build_dummy_input(cfg)
@@ -192,7 +192,7 @@ def validate(cfg_path):
         if isinstance(torch_out, dict):
             torch_out = next(iter(torch_out.values()))
 
-    engine_path = Path(cfg["paths"]["engine_model_dir"]) / "1" / "model.plan"
+    engine_path = Path(cfg["paths"]["engine_model_dir"]) / "1" / "models.plan"
     engine = load_engine(engine_path)
     trt_out = infer_trt(engine, [x.numpy() for x in dummy_inputs])
 
@@ -209,8 +209,8 @@ def validate(cfg_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Validate TensorRT model output vs PyTorch"
+        description="Validate TensorRT models output vs PyTorch"
     )
-    parser.add_argument("--config", required=True, help="Path to model YAML config")
+    parser.add_argument("--config", required=True, help="Path to models YAML config")
     args = parser.parse_args()
     validate(args.config)
