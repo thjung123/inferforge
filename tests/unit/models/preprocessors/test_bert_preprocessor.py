@@ -1,5 +1,5 @@
 import numpy as np
-from models.preprocessors.bert_preprocessor import BertPreprocessor
+from model_builder.preprocessors.bert_preprocessor import BertPreprocessor
 
 
 def test_bert_preprocessor_basic():
