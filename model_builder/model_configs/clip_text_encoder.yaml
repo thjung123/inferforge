@@ -9,20 +9,23 @@ paths:
 inputs:
   - name: "text"
     dtype: "int32"
-    shape: [1, 77]
+    shape: [-1, 77]
 
 outputs:
   - name: "text_embedding"
     dtype: "float32"
-    shape: [1, 512]
+    shape: [-1, 512]
 
 precision:
   default: "fp16"
   enable_int8: false
 
+dynamic_shapes:
+  enabled: true
+
 triton:
   backend: "tensorrt"
-  max_batch_size: 4
+  max_batch_size: 256
   instance_group:
     - count: 1
       kind: "KIND_GPU"

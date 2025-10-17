@@ -3,7 +3,7 @@ framework: pytorch
 
 paths:
   source_model: "weights/bert-base-uncased.pt"
-  onnx_model: "model_repository/bert_encoder/models.onnx"
+  onnx_model: "model_repository/bert_encoder/bert_encoder.onnx"
   engine_model_dir: "model_repository/bert_encoder"
 
 inputs:
@@ -38,7 +38,7 @@ dynamic_shapes:
 
 triton:
   backend: "tensorrt"
-  max_batch_size: 8
+  max_batch_size: 256
   instance_group:
     - count: 1
       kind: "KIND_GPU"
