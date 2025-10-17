@@ -30,8 +30,8 @@ elif [ "$PRECISION" = "fp16" ]; then
           --saveEngine="$ENGINE_PATH" \
           --fp16 \
           --minShapes=input_ids:1x8,attention_mask:1x8,token_type_ids:1x8 \
-          --optShapes=input_ids:4x64,attention_mask:4x64,token_type_ids:4x64 \
-          --maxShapes=input_ids:8x128,attention_mask:8x128,token_type_ids:8x128 \
+          --optShapes=input_ids:32x64,attention_mask:32x64,token_type_ids:32x64 \
+          --maxShapes=input_ids:256x128,attention_mask:256x128,token_type_ids:256x128
           --verbose
 else
   trtexec --onnx="$ONNX_PATH" \

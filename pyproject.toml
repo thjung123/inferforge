@@ -9,6 +9,7 @@ dependencies = [
     "fastapi>=0.118.0",
     "gunicorn>=23.0.0",
     "httpx>=0.28.1",
+    "numpy>=2.3.3",
     "onnx>=1.19.1",
     "onnxruntime>=1.23.1",
     "openai-clip>=1.0.1",

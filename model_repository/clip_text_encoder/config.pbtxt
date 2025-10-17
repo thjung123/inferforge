@@ -1,6 +1,6 @@
 name: "clip_text_encoder"
 platform: "tensorrt_plan"
-max_batch_size: 4
+max_batch_size: 256
 
 input [
   { name: "text" data_type: TYPE_INT32 dims: [77] }

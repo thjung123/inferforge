@@ -28,21 +28,23 @@ def generate_triton_config(cfg_path: str):
 
     if "inputs" in cfg:
         lines.append("input [")
-        for inp in cfg["inputs"]:
-            dims = ", ".join(str(d) for d in inp["shape"][1:])  # exclude batch dim
+        for i, inp in enumerate(cfg["inputs"]):
+            dims = ", ".join(str(d) for d in inp["shape"][1:])
             dtype = DTYPE_MAP[inp["dtype"]]
+            comma = "," if i < len(cfg["inputs"]) - 1 else ""
             lines.append(
-                f'  {{ name: "{inp["name"]}" data_type: {dtype} dims: [{dims}] }}'
+                f'  {{ name: "{inp["name"]}" data_type: {dtype} dims: [{dims}] }}{comma}'
             )
         lines.append("]\n")
 
     if "outputs" in cfg:
         lines.append("output [")
-        for out in cfg["outputs"]:
+        for i, out in enumerate(cfg["outputs"]):
             dims = ", ".join(str(d) for d in out["shape"][1:])
             dtype = DTYPE_MAP[out["dtype"]]
+            comma = "," if i < len(cfg["outputs"]) - 1 else ""
             lines.append(
-                f'  {{ name: "{out["name"]}" data_type: {dtype} dims: [{dims}] }}'
+                f'  {{ name: "{out["name"]}" data_type: {dtype} dims: [{dims}] }}{comma}'
             )
         lines.append("]\n")
 

@@ -13,19 +13,19 @@ output [
   {
     name: "INPUT_IDS"
     data_type: TYPE_INT32
-    dims: [ -1, 128 ]
+    dims: [ 128 ]
   },
   {
     name: "ATTENTION_MASK"
     data_type: TYPE_INT32
-    dims: [ -1, 128 ]
+    dims: [ 128 ]
   },
   {
     name: "TOKEN_TYPE_IDS"
     data_type: TYPE_INT32
-    dims: [ -1, 128 ]
+    dims: [ 128 ]
   }
 ]
 
 instance_group [{ kind: KIND_CPU }]
-max_batch_size: 8
+max_batch_size: 256
