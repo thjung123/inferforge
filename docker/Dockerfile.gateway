@@ -6,6 +6,10 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml ./
 RUN uv pip install --system .
 
+RUN pip install --no-cache-dir "tritonclient[grpc]==2.61.0" --no-deps \
+    && pip install --no-cache-dir grpcio protobuf python-rapidjson
+
+
 COPY gateway ./gateway
 COPY model_builder ./model_builder
 
