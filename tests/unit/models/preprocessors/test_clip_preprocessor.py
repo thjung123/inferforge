@@ -29,4 +29,4 @@ def test_clip_text_preprocessor():
     assert "attention_mask" in result
     assert result["input_ids"].shape[0] == len(texts)
     assert result["input_ids"].shape[1] == preprocessor.max_length
-    assert result["input_ids"].dtype == np.int64
+    assert result["input_ids"].dtype == np.int32

@@ -2,7 +2,7 @@ model_name: clip_image_encoder
 framework: pytorch
 
 paths:
-  source_model: "weights/clip_image_encoder.pt"
+  source_model: "model_builder/example/weights/clip_image_encoder.pt"
   onnx_model: "model_repository/clip_image_encoder/clip_image_encoder.onnx"
   engine_model_dir: "model_repository/clip_image_encoder"
 

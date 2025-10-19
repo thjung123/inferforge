@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Dict
 from transformers import BertTokenizerFast
-from gateway.utils.logger import gateway_logger as logger
+from gateway.utils.logger import model_builder_logger as logger
 
 
 class BertPreprocessor:
@@ -21,9 +21,9 @@ class BertPreprocessor:
             return_tensors="np",
         )
 
-        input_ids = enc["input_ids"].astype(np.int64)
-        attention_mask = enc["attention_mask"].astype(np.int64)
-        token_type_ids = enc["token_type_ids"].astype(np.int64)
+        input_ids = enc["input_ids"].astype(np.int32)
+        attention_mask = enc["attention_mask"].astype(np.int32)
+        token_type_ids = enc["token_type_ids"].astype(np.int32)
 
         logger.info(f"[Preprocessor] Done. Shape: {input_ids.shape}")
         return {

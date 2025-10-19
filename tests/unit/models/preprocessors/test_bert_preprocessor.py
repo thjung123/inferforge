@@ -17,4 +17,4 @@ def test_bert_preprocessor_basic():
         assert isinstance(result[key], np.ndarray)
         assert result[key].ndim == 2
         assert result[key].shape[0] == len(texts)
-        assert result[key].dtype == np.int64
+        assert result[key].dtype == np.int32

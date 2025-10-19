@@ -2,7 +2,7 @@ model_name: bert_encoder
 framework: pytorch
 
 paths:
-  source_model: "weights/bert-base-uncased.pt"
+  source_model: "model_builder/example/weights/bert-base-uncased.pt"
   onnx_model: "model_repository/bert_encoder/bert_encoder.onnx"
   engine_model_dir: "model_repository/bert_encoder"
 

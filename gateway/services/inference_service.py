@@ -1,8 +1,7 @@
-from gateway.services.preprocess import preprocess_inputs
-from gateway.services.postprocess import postprocess_outputs
 from gateway.clients.triton_client import TritonClient
 from gateway.utils.exceptions import InvalidInputError, TritonConnectionError
 from gateway.utils.logger import gateway_logger as logger
+from typing import List
 import time
 
 
@@ -10,20 +9,15 @@ class InferenceService:
     def __init__(self, client: TritonClient):
         self.client = client
 
-    async def run_inference(self, model_name: str, inputs: list[dict]) -> dict:
+    async def run_inference(self, model_name: str, inputs: List[dict]) -> dict:
         if not inputs:
             logger.warning("Inference failed: empty input")
             raise InvalidInputError("Input data is empty")
 
-        logger.info(
-            f"Starting inference | model={model_name}, input_size={len(inputs)}"
-        )
+        logger.info(f"Starting inference | model={model_name}")
         start_time = time.time()
-
-        processed = preprocess_inputs(inputs)
-
         try:
-            raw_result = await self.client.infer(model_name, processed)
+            raw_result = await self.client.infer(model_name, inputs)
         except TimeoutError:
             logger.error(f"Triton timeout | model={model_name}")
             raise TritonConnectionError("Triton inference timed out")
@@ -36,5 +30,4 @@ class InferenceService:
             f"Inference completed | model={model_name}, duration={duration:.3f}s, "
             f"result_keys={list(raw_result.keys())}"
         )
-
-        return postprocess_outputs(raw_result)
+        return raw_result
