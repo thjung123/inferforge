@@ -1,11 +1,11 @@
 import triton_python_backend_utils as pb_utils
 from model_builder.preprocessors.bert_preprocessor import BertPreprocessor
-from gateway.utils.logger import logger
+from gateway.utils.logger import triton_logger as logger
 
 
 class TritonPythonModel:
     def initialize(self, args):
-        logger.info("[Triton] Initializing BertPreprocessor")
+        logger.info("Initializing BertPreprocessor")
         self.processor = BertPreprocessor()
 
     def execute(self, requests):
@@ -13,7 +13,7 @@ class TritonPythonModel:
         for request in requests:
             input_tensor = pb_utils.get_input_tensor_by_name(request, "TEXTS")
             texts = [t.decode("utf-8") for t in input_tensor.as_numpy().flatten()]
-            logger.info(f"[Triton] Received {len(texts)} BERT text inputs")
+            logger.info(f"Received {len(texts)} BERT text inputs")
 
             result = self.processor.run(texts)
 

@@ -4,7 +4,7 @@ import aiohttp
 import numpy as np
 from PIL import Image
 from typing import List, Union
-from gateway.utils.logger import logger
+from gateway.utils.logger import model_builder_logger as logger
 
 
 class ClipImagePreprocessor:
