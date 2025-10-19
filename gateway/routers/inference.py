@@ -1,16 +1,17 @@
 from fastapi import APIRouter, Depends
 from gateway.schemas.inference_request import InferenceRequest
-from gateway.schemas.inference_response import InferenceResponse
+from gateway.services.inference_manager.dispatcher import InferenceDispatcher
 from gateway.services.inference_service import InferenceService
 from gateway.clients.triton_client import TritonClient, get_triton_client
 
 router = APIRouter()
 
 
-@router.post("/", response_model=InferenceResponse)
+@router.post("/", response_model=None)
 async def infer(
     req: InferenceRequest, client: TritonClient = Depends(get_triton_client)
 ):
     service = InferenceService(client)
-    result = await service.run_inference(req.model_name, req.inputs)
+    dispatcher = InferenceDispatcher(service)
+    result = await dispatcher.run(req.model_name, req.inputs)
     return result
