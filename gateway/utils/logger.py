@@ -10,8 +10,8 @@ class SafeJsonFormatter(jsonlogger.JsonFormatter):
         return log_record
 
 
-def setup_logger(level=logging.INFO) -> logging.Logger:
-    logger = logging.getLogger()
+def setup_logger(scope: str, level=logging.INFO) -> logging.Logger:
+    logger = logging.getLogger(f"gateway.{scope}")
     gunicorn_logger = logging.getLogger("gunicorn.access")
 
     if not logger.handlers:
@@ -29,5 +29,6 @@ def setup_logger(level=logging.INFO) -> logging.Logger:
 
     return logger
 
-
-logger = setup_logger(level=logging.INFO)
+triton_logger = setup_logger("triton", level=logging.INFO)
+gateway_logger = setup_logger("gateway", level=logging.INFO)
+model_builder_logger = setup_logger("model_builder", level=logging.INFO)

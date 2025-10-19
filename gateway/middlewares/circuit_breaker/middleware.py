@@ -1,6 +1,6 @@
 from fastapi import Request, Response
 from gateway.middlewares.circuit_breaker.manager import breaker_manager
-from gateway.utils.logger import logger
+from gateway.utils.logger import gateway_logger as logger
 
 
 async def circuit_breaker_middleware(request: Request, call_next):

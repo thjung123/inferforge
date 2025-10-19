@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Dict
 from transformers import BertTokenizerFast
-from gateway.utils.logger import logger
+from gateway.utils.logger import gateway_logger as logger
 
 
 class BertPreprocessor:

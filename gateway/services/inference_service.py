@@ -2,7 +2,7 @@ from gateway.services.preprocess import preprocess_inputs
 from gateway.services.postprocess import postprocess_outputs
 from gateway.clients.triton_client import TritonClient
 from gateway.utils.exceptions import InvalidInputError, TritonConnectionError
-from gateway.utils.logger import logger
+from gateway.utils.logger import gateway_logger as logger
 import time
 
 
@@ -10,7 +10,7 @@ class InferenceService:
     def __init__(self, client: TritonClient):
         self.client = client
 
-    async def run_inference(self, model_name: str, inputs: dict) -> dict:
+    async def run_inference(self, model_name: str, inputs: list[dict]) -> dict:
         if not inputs:
             logger.warning("Inference failed: empty input")
             raise InvalidInputError("Input data is empty")
