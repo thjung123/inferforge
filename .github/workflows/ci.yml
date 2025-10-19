@@ -72,7 +72,7 @@ jobs:
         run: |
           echo "Waiting for Gateway service..."
           for i in {1..180}; do
-            if curl -fs http://localhost:8000/health > /dev/null; then
+            if curl -fs http://localhost:8080/health > /dev/null; then
               echo "Gateway is ready!"
               exit 0
             fi

@@ -2,7 +2,7 @@ import pytest
 import requests
 import time
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8080"
 
 
 def wait_for_service(url, timeout=40):

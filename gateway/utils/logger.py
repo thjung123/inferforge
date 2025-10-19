@@ -1,10 +1,10 @@
 import logging
 import sys
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger import json
 from gateway.middlewares.request_id import request_id_ctx
 
 
-class SafeJsonFormatter(jsonlogger.JsonFormatter):
+class SafeJsonFormatter(json.JsonFormatter):
     def process_log_record(self, log_record):
         log_record["request_id"] = request_id_ctx.get() or "-"
         return log_record
