@@ -66,7 +66,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y docker-compose
 
       - name: Start docker-compose (gateway + redis)
-        run: docker-compose -f docker/docker-compose.yml up -d --build
+        run: docker-compose -f docker/docker-compose.ci.yml up -d --build
 
       - name: Wait for Gateway to become ready
         run: |
@@ -89,4 +89,4 @@ jobs:
 
       - name: Shutdown services
         if: always()
-        run: docker-compose -f docker/docker-compose.yml down -v
+        run: docker-compose -f docker/docker-compose.ci.yml down -v
