@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Dict
 from transformers import CLIPTokenizerFast
-from gateway.utils.logger import gateway_logger as logger
+from gateway.utils.logger import model_builder_logger as logger
 
 
 class ClipTextPreprocessor:
@@ -23,8 +23,8 @@ class ClipTextPreprocessor:
             return_tensors="np",
         )
 
-        input_ids = enc["input_ids"].astype(np.int64)
-        attention_mask = enc["attention_mask"].astype(np.int64)
+        input_ids = enc["input_ids"].astype(np.int32)
+        attention_mask = enc["attention_mask"].astype(np.int32)
 
         logger.info(f"[Preprocessor] Done. Shape: input_ids={input_ids.shape}")
         return {"input_ids": input_ids, "attention_mask": attention_mask}
