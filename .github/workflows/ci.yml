@@ -25,6 +25,11 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Install Triton client deps (inside uv venv)
+        run: |
+          . .venv/bin/activate
+          uv pip install "tritonclient[grpc]==2.61.0"
+          uv pip install grpcio protobuf python-rapidjson
       - name: Lint (ruff)
         run: uv run ruff check .
 
@@ -62,6 +67,12 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Install Triton client deps (inside uv venv)
+        run: |
+          . .venv/bin/activate
+          uv pip install "tritonclient[grpc]==2.61.0"
+          uv pip install grpcio protobuf python-rapidjson
+
       - name: Install Docker Compose
         run: sudo apt-get update && sudo apt-get install -y docker-compose
 
@@ -84,6 +95,7 @@ jobs:
             sleep 1
           done
           echo "Gateway did not start in time" && exit 1
+
       - name: Run integration tests
         run: uv run pytest -v tests/integration --maxfail=1 --disable-warnings
 
