@@ -192,7 +192,7 @@ def validate(cfg_path):
         if isinstance(torch_out, dict):
             torch_out = next(iter(torch_out.values()))
 
-    engine_path = Path(cfg["paths"]["engine_model_dir"]) / "1" / "models.plan"
+    engine_path = Path(cfg["paths"]["engine_model_dir"]) / "1" / "model.plan"
     engine = load_engine(engine_path)
     trt_out = infer_trt(engine, [x.numpy() for x in dummy_inputs])
 

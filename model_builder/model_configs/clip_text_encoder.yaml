@@ -2,7 +2,7 @@ model_name: clip_text_encoder
 framework: pytorch
 
 paths:
-  source_model: "weights/clip_text_encoder.pt"
+  source_model: "model_builder/example/weights/clip_text_encoder.pt"
   onnx_model: "model_repository/clip_text_encoder/clip_text_encoder.onnx"
   engine_model_dir: "model_repository/clip_text_encoder"
 
