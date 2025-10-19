@@ -1,10 +1,13 @@
 import asyncio
 import os
 from functools import lru_cache
+from typing import List
+
 import aiohttp
 from aiohttp import ClientTimeout
 from gateway.middlewares.circuit_breaker.manager import breaker_manager
-from gateway.utils.logger import logger
+from gateway.utils.logger import gateway_logger as logger
+import torch
 
 
 class TritonClient:
@@ -15,23 +18,26 @@ class TritonClient:
 
         self.triton_url = os.getenv("TRITON_URL", "http://triton:8001")
         try:
-            import torch  # type: ignore
-
             self.gpu_enabled = torch.cuda.is_available()
         except Exception:
             self.gpu_enabled = False
         self.triton_enabled = self.gpu_enabled and self.triton_url.startswith("http")
+        logger.info(
+            f"[TritonClient INIT] gpu_enabled={self.gpu_enabled}, "
+            f"triton_enabled={self.triton_enabled}, "
+            f"triton_url={self.triton_url}"
+        )
 
-    async def infer(self, model_name: str, inputs: dict) -> dict:
+    async def infer(self, model_name: str, inputs: List[dict]) -> dict:
         if not self.triton_breaker.allow_request():
             logger.warning("[TritonBreaker] Circuit open - skipping inference")
             return {"error": "Triton circuit open - skipping inference"}
 
         if not self.triton_enabled:
-            logger.info(
-                f"[TritonClient] No GPU or Triton server detected — using fallback for {model_name}"
+            logger.error(
+                f"[TritonClient] Triton not available (gpu_enabled={self.gpu_enabled}, url={self.triton_url})"
             )
-            return {"class": "mock-cat", "confidence": 0.99, "mock": True}
+            raise RuntimeError("Triton not available on this system")
 
         for attempt in range(1, self.max_retries + 1):
             try:
@@ -46,6 +52,7 @@ class TritonClient:
                         if resp.status != 200:
                             raise RuntimeError(f"Triton HTTP {resp.status}")
                         data = await resp.json()
+                        logger.info("Response: ", data)
                 logger.info(f"[TritonClient] Success | model={model_name}")
                 self.triton_breaker.record_success()
                 return data

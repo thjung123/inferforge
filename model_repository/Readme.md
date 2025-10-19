@@ -1,12 +1,18 @@
-Before running this,
+Before running this,  
+you need to **generate all TensorRT `.plan` files and `config.pbtxt` files** first.  
+These are required for Triton to load and serve your models.
 
-you need to generate the plan file and config.pbtxt first inside the `model/scripts` directory.
+You can automatically build them using the conversion script inside the `model_builder/scripts` directory:
 
-folder architecture
+```bash
+bash model_builder/scripts/convert_all.sh
+```
+
+The resulting folder structure under model_repository/ should look like this:
 
 ```
 model_repository/
-├── clip_image_preprocessing/
+├── bert_preprocessing/
 │   ├── 1/
 │   │   └── model.py
 │   └── config.pbtxt
@@ -14,11 +20,11 @@ model_repository/
 │   ├── 1/
 │   │   └── model.py
 │   └── config.pbtxt
-├── bert_preprocessing/
+├── clip_image_preprocessing/
 │   ├── 1/
 │   │   └── model.py
 │   └── config.pbtxt
-├── clip_image_encoder/
+├── bert_encoder/
 │   ├── 1/
 │   │   └── model.plan
 │   └── config.pbtxt
@@ -26,7 +32,7 @@ model_repository/
 │   ├── 1/
 │   │   └── model.plan
 │   └── config.pbtxt
-├── bert_encoder/
+├── clip_image_encoder/
 │   ├── 1/
 │   │   └── model.plan
 │   └── config.pbtxt
@@ -34,4 +40,5 @@ model_repository/
 │   ├── 1/
 │   │   └── .gitkeep
 │   └── config.pbtxt
+
 ```
