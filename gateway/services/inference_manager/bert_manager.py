@@ -11,17 +11,16 @@ class BertManager(BaseManager):
         req = BertRequest(TEXTS=texts)
         inputs = req.to_triton_inputs()
 
-        raw = await self.service.run_inference(self.MODEL_NAME, inputs)
-        outputs = {out["name"]: out for out in raw.get("outputs", [])}
+        raw = await self.service.run_inference(
+            self.MODEL_NAME, inputs, req.OUTPUT_NAMES
+        )
 
-        bert_out = outputs.get("bert_emb")
-        if bert_out is None:
+        output_name = req.OUTPUT_NAMES[0]
+        bert_emb = raw.get(output_name)
+        if bert_emb is None:
             raise ValueError(f"Triton response missing 'bert_emb' output: {raw}")
 
-        data = bert_out["data"]
-        shape = bert_out.get("shape", [])
-
-        bert_emb = np.array(data, dtype=np.float32).reshape(shape).tolist()
-        logger.info(f"[Postprocessor] Received BERT embeddings shape={shape}")
-
-        return BertResponse(bert_emb=bert_emb)
+        bert_emb = np.array(bert_emb, dtype=np.float32)
+        logger.info(f"[BertManager] Received {output_name} shape={bert_emb.shape}")
+        bert_emb_list = bert_emb.tolist()
+        return BertResponse(bert_emb=bert_emb_list)

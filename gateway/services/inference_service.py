@@ -9,7 +9,9 @@ class InferenceService:
     def __init__(self, client: TritonClient):
         self.client = client
 
-    async def run_inference(self, model_name: str, inputs: List[dict]) -> dict:
+    async def run_inference(
+        self, model_name: str, inputs: List[dict], output_names: list[str]
+    ) -> dict:
         if not inputs:
             logger.warning("Inference failed: empty input")
             raise InvalidInputError("Input data is empty")
@@ -17,7 +19,7 @@ class InferenceService:
         logger.info(f"Starting inference | model={model_name}")
         start_time = time.time()
         try:
-            raw_result = await self.client.infer(model_name, inputs)
+            raw_result = await self.client.infer(model_name, inputs, output_names)
         except TimeoutError:
             logger.error(f"Triton timeout | model={model_name}")
             raise TritonConnectionError("Triton inference timed out")
