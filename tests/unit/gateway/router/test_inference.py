@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from fastapi.testclient import TestClient
 from gateway.main import app
 from gateway.services.inference_service import InferenceService
@@ -12,27 +13,20 @@ def client():
 
 @pytest.fixture
 def override_service(monkeypatch):
-    async def mock_run_inference(self, model_name, inputs):
+    async def mock_run_inference(self, model_name, inputs, *args, **kwargs):
         if model_name == "bert_ensemble":
-            return {
-                "outputs": [
-                    {"name": "bert_emb", "data": [[0.1, 0.2, 0.3]], "shape": [1, 3]}
-                ]
-            }
+            return {"bert_emb": np.array([[0.1, 0.2, 0.3]], dtype=np.float32)}
         elif model_name == "clip_ensemble":
-            return {
-                "outputs": [{"name": "similarity", "data": [[0.99]], "shape": [1, 1]}]
-            }
+            return {"similarity": np.array([[0.99]], dtype=np.float32)}
         else:
             raise ValueError("unknown model")
 
     monkeypatch.setattr(InferenceService, "run_inference", mock_run_inference)
 
-    dependency_overrides: dict = getattr(app, "dependency_overrides", {})
+    dependency_overrides = getattr(app, "dependency_overrides", {})
     dependency_overrides[get_triton_client] = lambda: None
 
     yield
-
     dependency_overrides.clear()
 
 
@@ -44,7 +38,6 @@ def test_infer_bert(client, override_service):
     assert res.status_code == 200
 
     data = res.json()
-
     assert "bert_emb" in data
     assert isinstance(data["bert_emb"], list)
     assert len(data["bert_emb"][0]) == 3
