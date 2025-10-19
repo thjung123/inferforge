@@ -41,7 +41,7 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - API_KEY_WHITELIST=["test-key"]
-      - TRITON_URL=http://triton:8000
+      - TRITON_URL=triton:8001
       - NVIDIA_VISIBLE_DEVICES=all
     deploy:
       resources:
