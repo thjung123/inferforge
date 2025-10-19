@@ -24,7 +24,7 @@ Instead, we fetch pretrained checkpoints (usually from Hugging Face Hub or OpenA
 
 Command:
 ```
-python model/scripts/convert_to_onnx.py --config model/model_configs/bert_config.yaml
+python model_builder/scripts/convert_to_onnx.py --config model_builder/model_configs/bert_config.yaml
 ```
 
 - Loads pretrained weights (from Hugging Face or local cache)
@@ -44,11 +44,11 @@ python model/scripts/convert_to_onnx.py --config model/model_configs/bert_config
 
 Command:
 ```
-bash model/scripts/build_trt_engine.sh <ONNX_PATH> [fp16|int8]
+bash model_builder/scripts/build_trt_engine.sh <ONNX_PATH> [fp16|int8]
 ```
 Example:
 ```
-bash model/scripts/build_trt_engine.sh model_repository/bert_encoder/bert_encoder.onnx fp16
+bash model_builder/scripts/build_trt_engine.sh model_repository/bert_encoder/bert_encoder.onnx fp16
 ```
 
 This script internally calls trtexec to convert the ONNX model into a TensorRT engine (.plan file).
@@ -68,7 +68,7 @@ model_repository/<model_name>/1/model.plan
 
 Command:
 ```
-python model/scripts/validate_model.py --config model/model_configs/bert_config.yaml
+python model_builder/scripts/validate_model.py --config model_builder/model_configs/bert_config.yaml
 ```
 
 - Loads both PyTorch and TensorRT engines
@@ -100,7 +100,7 @@ Validation passed successfully.
 
 Command:
 ```
-python model/scripts/generate_triton_config.py --config model/model_configs/bert_config.yaml
+python model_builder/scripts/generate_triton_config.py --config model_builder/model_configs/bert_config.yaml
 ```
 
 - Reads YAML model spec
@@ -122,21 +122,20 @@ model_repository/
 │   ├── model.onnx
 │   └── config.pbtxt
 │
-└── clip_multimodal/
-    ├── text_encoder/
-    │   ├── 1/
-    │   │   └── model.plan
-    │   ├── clip_text_encoder.onnx
-    │   └── config.pbtxt
-    │
-    ├── image_encoder/
-    │   ├── 1/
-    │   │   └── model.plan
-    │   ├── clip_image_encoder.onnx
-    │   └── config.pbtxt
-    │
-    └── ensemble/
-        └── config.pbtxt    # optional (for multimodal fusion)
+├── text_encoder/
+│   ├── 1/
+│   │   └── model.plan
+│   ├── clip_text_encoder.onnx
+│   └── config.pbtxt
+│
+├── image_encoder/
+│   ├── 1/
+│   │   └── model.plan
+│   ├── clip_image_encoder.onnx
+│   └── config.pbtxt
+│
+└── ensemble/
+    └── config.pbtxt    # optional (for multimodal fusion)
 ```
 
 ---
@@ -213,19 +212,19 @@ steps:
 
 name: Convert PyTorch to ONNX
 ```
-run: python model/scripts/convert_to_onnx.py --config model/model_configs/bert_config.yaml
+run: python model_builder/scripts/convert_to_onnx.py --config model_builder/model_configs/bert_config.yaml
 ```
 name: Build TensorRT Engine
 ```
-run: bash model/scripts/build_trt_engine.sh model_repository/bert_encoder/model.onnx fp16
+run: bash model_builder/scripts/build_trt_engine.sh model_repository/bert_encoder/model.onnx fp16
 ```
 name: Validate Model
 ```
-run: python model/scripts/validate_model.py --config model/model_configs/bert_config.yaml
+run: python model_builder/scripts/validate_model.py --config model_builder/model_configs/bert_config.yaml
 ```
 name: Generate Triton Config
 ```
-run: python model/scripts/generate_triton_config.py --config model/model_configs/bert_config.yaml
+run: python model_builder/scripts/generate_triton_config.py --config model_builder/model_configs/bert_config.yaml
 ```
 
 

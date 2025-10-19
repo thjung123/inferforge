@@ -1,0 +1,21 @@
+name: "clip_image_preprocessor"
+backend: "python"
+
+input [
+  {
+    name: "IMAGE_URLS"
+    data_type: TYPE_STRING
+    dims: [ -1 ]
+  }
+]
+
+output [
+  {
+    name: "IMAGE_TENSOR"
+    data_type: TYPE_FP32
+    dims: [ 3, 224, 224 ]
+  }
+]
+
+instance_group [{ kind: KIND_GPU }]
+max_batch_size: 256

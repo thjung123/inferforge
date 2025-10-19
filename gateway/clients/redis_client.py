@@ -1,12 +1,11 @@
-from typing import Optional
 from redis.asyncio import Redis
 from gateway.config import get_settings
 from gateway.middlewares.circuit_breaker.manager import breaker_manager
-from gateway.utils.logger import logger
+from gateway.utils.logger import gateway_logger as logger
 
 
 class RedisClient:
-    _instance: Optional[Redis] = None
+    _instance: Redis | None = None
 
     @classmethod
     async def get_instance(cls) -> Redis:

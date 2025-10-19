@@ -1,43 +1,35 @@
 import logging
 import sys
-from logging.handlers import QueueHandler, QueueListener
-from multiprocessing import Queue
-from typing import Optional
-
-_log_queue: Optional[Queue] = None
-_listener: Optional[QueueListener] = None
+from pythonjsonlogger import json
+from gateway.middlewares.request_id import request_id_ctx
 
 
-class SafeFormatter(logging.Formatter):
-    def format(self, record):
-        if not hasattr(record, "request_id"):
-            record.request_id = "-"
-        return super().format(record)
+class SafeJsonFormatter(json.JsonFormatter):
+    def process_log_record(self, log_record):
+        log_record["request_id"] = request_id_ctx.get() or "-"
+        return log_record
 
 
-def setup_async_logger(
-    name: str = "gateway", level: int = logging.INFO
-) -> logging.Logger:
-    global _log_queue, _listener
+def setup_logger(scope: str, level=logging.INFO) -> logging.Logger:
+    logger = logging.getLogger(f"gateway.{scope}")
+    gunicorn_logger = logging.getLogger("gunicorn.access")
 
-    if _log_queue is None:
-        _log_queue = Queue(-1)
-
-        stream_handler = logging.StreamHandler(sys.stdout)
-        stream_handler.setFormatter(
-            SafeFormatter("[%(asctime)s] [%(levelname)s] [%(request_id)s] %(message)s")
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(
+            SafeJsonFormatter(
+                "%(asctime)s %(levelname)s %(name)s %(process)d %(request_id)s %(message)s"
+            )
         )
-        _listener = QueueListener(
-            _log_queue, stream_handler, respect_handler_level=True
-        )
-        _listener.start()
+        logger.addHandler(handler)
+        logger.setLevel(level)
 
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.addHandler(QueueHandler(_log_queue))
-    logger.propagate = False
+        logger.parent = gunicorn_logger
+        logger.propagate = True
 
     return logger
 
 
-logger = setup_async_logger()
+triton_logger = setup_logger("triton", level=logging.INFO)
+gateway_logger = setup_logger("gateway", level=logging.INFO)
+model_builder_logger = setup_logger("model_builder", level=logging.INFO)
