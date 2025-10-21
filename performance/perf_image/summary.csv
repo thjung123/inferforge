@@ -1,0 +1,17 @@
+csv_file,batch,concurrency,mode,delay,throughput,p95_latency,gpu_util
+clip_image_encoder_b8_c1_static_batch_scaling_dynamic_200.csv,8,1,dynamic,200.0,631.17,12940,56.8509
+clip_image_encoder_b8_c1_static_batch_scaling_dynamic_10000.csv,8,1,dynamic,10000.0,634.543,12834,55.9663
+clip_image_encoder_b8_c1_static_batch_scaling_dynamic_100000.csv,8,1,dynamic,100000.0,629.181,13057,54.4095
+clip_image_encoder_b8_c1_static_batch_scaling_no_dynamic.csv,8,1,no_dynamic,,625.177,13103,53.8493
+clip_image_encoder_b64_c1_concurrency_scaling_dynamic_200.csv,64,1,dynamic,200.0,598.033,110837,41.3624
+clip_image_encoder_b64_c1_static_batch_scaling_dynamic_200.csv,64,1,dynamic,200.0,587.632,114541,36.6294
+clip_image_encoder_b64_c1_static_batch_scaling_dynamic_10000.csv,64,1,dynamic,10000.0,591.097,112818,40.1122
+clip_image_encoder_b64_c1_static_batch_scaling_dynamic_100000.csv,64,1,dynamic,100000.0,594.486,112016,38.1817
+clip_image_encoder_b64_c1_static_batch_scaling_no_dynamic.csv,64,1,no_dynamic,,580.568,114187,36.5163
+clip_image_encoder_b64_c4_concurrency_scaling_dynamic_200.csv,64,4,dynamic,200.0,1431.26,239745,67.0282
+clip_image_encoder_b64_c8_concurrency_scaling_dynamic_200.csv,64,8,dynamic,200.0,1058.03,505040,58.8581
+clip_image_encoder_b64_c16_concurrency_scaling_dynamic_200.csv,64,16,dynamic,200.0,1392.01,1138216,63.2139
+clip_image_encoder_b1024_c1_static_batch_scaling_dynamic_200.csv,1024,1,dynamic,200.0,511.209,1942961,49.8856
+clip_image_encoder_b1024_c1_static_batch_scaling_dynamic_10000.csv,1024,1,dynamic,10000.0,511.006,1919219,43.0
+clip_image_encoder_b1024_c1_static_batch_scaling_dynamic_100000.csv,1024,1,dynamic,100000.0,511.258,1913376,40.6407
+clip_image_encoder_b1024_c1_static_batch_scaling_no_dynamic.csv,1024,1,no_dynamic,,511.191,1915489,46.9776
