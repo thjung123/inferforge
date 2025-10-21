@@ -1,0 +1,42 @@
+### Run Bert Ensemble Inference
+POST http://localhost:8080/infer/
+Content-Type: application/json
+x-api-key: test-key
+
+{
+  "model_name": "bert_ensemble",
+  "inputs": {
+    "texts": [
+      "Artificial intelligence is transforming the world.",
+      "The quick brown fox jumps over the lazy dog.",
+      "A large language model trained on diverse data.",
+      "The cat sat on the mat.",
+      "Machine learning enables predictive analytics."
+    ]
+  }
+}
+
+### Run CLIP Ensemble Inference
+POST http://localhost:8080/infer/
+Content-Type: application/json
+x-api-key: test-key
+
+{
+  "model_name": "clip_ensemble",
+  "inputs": {
+    "image_urls": [
+      "https://picsum.photos/id/237/512/512",
+      "https://picsum.photos/id/1025/512/512",
+      "https://picsum.photos/id/1003/512/512",
+      "https://picsum.photos/id/1018/512/512",
+      "https://picsum.photos/id/1020/512/512"
+    ],
+    "texts": [
+      "a photo of a cat",
+      "a small bird",
+      "a golden retriever dog",
+      "a red flower",
+      "a yellow sunflower"
+    ]
+  }
+}

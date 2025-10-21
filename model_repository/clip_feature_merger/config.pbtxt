@@ -1,0 +1,31 @@
+name: "clip_feature_merger"
+backend: "python"
+
+input [
+  {
+    name: "image_emb"
+    data_type: TYPE_FP32
+    dims: [ -1 ]
+  },
+  {
+    name: "text_emb"
+    data_type: TYPE_FP32
+    dims: [ -1 ]
+  }
+]
+
+output [
+  {
+    name: "similarity"
+    data_type: TYPE_FP32
+    dims: [ -1, -1 ]
+  }
+]
+
+instance_group [
+  {
+    kind: KIND_GPU
+  }
+]
+
+max_batch_size: 256

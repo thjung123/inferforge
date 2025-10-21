@@ -3,7 +3,7 @@ import pytest
 import requests
 import time
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8080"
 os.environ.setdefault("API_KEY_WHITELIST", '["test-key"]')
 HEADERS = {"x-api-key": "test-key"}
 

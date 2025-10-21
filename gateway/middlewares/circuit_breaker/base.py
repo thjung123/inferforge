@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 
 class CircuitBreaker:
@@ -8,7 +7,7 @@ class CircuitBreaker:
         self.failure_threshold = failure_threshold
         self.recovery_time = recovery_time
         self.fail_count = 0
-        self.last_failure: Optional[float] = None
+        self.last_failure: float | None = None
         self.open = False
 
     def record_failure(self):

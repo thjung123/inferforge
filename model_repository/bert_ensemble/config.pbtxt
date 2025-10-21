@@ -1,0 +1,64 @@
+name: "bert_ensemble"
+platform: "ensemble"
+max_batch_size: 256
+
+input [
+  {
+    name: "TEXTS"
+    data_type: TYPE_STRING
+    dims: [ -1 ]
+  }
+]
+
+output [
+  {
+    name: "bert_emb"
+    data_type: TYPE_FP32
+    dims: [ 768 ]
+  }
+]
+
+ensemble_scheduling {
+  step [
+    {
+      model_name: "bert_preprocessor"
+      model_version: -1
+      input_map {
+        key: "TEXTS"
+        value: "TEXTS"
+      }
+      output_map {
+        key: "INPUT_IDS"
+        value: "INPUT_IDS"
+      }
+      output_map {
+        key: "ATTENTION_MASK"
+        value: "ATTENTION_MASK"
+      }
+      output_map {
+        key: "TOKEN_TYPE_IDS"
+        value: "TOKEN_TYPE_IDS"
+      }
+    },
+    {
+      model_name: "bert_encoder"
+      model_version: -1
+      input_map {
+        key: "input_ids"
+        value: "INPUT_IDS"
+      }
+      input_map {
+        key: "attention_mask"
+        value: "ATTENTION_MASK"
+      }
+      input_map {
+        key: "token_type_ids"
+        value: "TOKEN_TYPE_IDS"
+      }
+      output_map {
+        key: "pooled_output"
+        value: "bert_emb"
+      }
+    }
+  ]
+}

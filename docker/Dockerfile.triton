@@ -1,0 +1,30 @@
+FROM nvcr.io/nvidia/tritonserver:25.06-py3
+
+WORKDIR /workspace
+
+RUN pip install --no-cache-dir uv
+COPY pyproject.toml ./
+
+RUN uv pip install --system --break-system-packages .
+
+COPY gateway ./gateway
+COPY model_builder ./model_builder
+
+
+ENV TRITON_MODEL_REPOSITORY=/models
+ENV TRITON_STRICT_MODEL_CONFIG=false
+ENV TRITON_ALLOW_HTTP=true
+ENV TRITON_ALLOW_GRPC=true
+ENV TRITON_EXIT_ON_ERROR=false
+ENV TRITON_LOG_VERBOSE=1
+
+
+EXPOSE 8000 8001 8002
+
+CMD sh -c "tritonserver \
+    --model-repository=${TRITON_MODEL_REPOSITORY} \
+    --strict-model-config=${TRITON_STRICT_MODEL_CONFIG} \
+    --allow-http=${TRITON_ALLOW_HTTP} \
+    --allow-grpc=${TRITON_ALLOW_GRPC} \
+    --exit-on-error=${TRITON_EXIT_ON_ERROR} \
+    --log-verbose=${TRITON_LOG_VERBOSE}"

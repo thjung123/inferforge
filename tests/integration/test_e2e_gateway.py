@@ -2,7 +2,7 @@ import pytest
 import requests
 import time
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8080"
 
 
 def wait_for_service(url, timeout=40):
@@ -37,15 +37,4 @@ def test_version_endpoint():
     assert "version" in body
     assert "commit" in body
     assert "build_time" in body
-    time.sleep(1)
-
-
-def test_inference_endpoint():
-    headers = {"x-api-key": "test-key"}
-    payload = {"model_name": "resnet50", "inputs": {"image": "dummy"}}
-    resp = requests.post(f"{BASE_URL}/infer", json=payload, headers=headers)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "class" in body
-    assert "confidence" in body
     time.sleep(1)

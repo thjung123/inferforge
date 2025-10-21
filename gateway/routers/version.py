@@ -1,10 +1,11 @@
 from fastapi import APIRouter
 import os
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=False)
 
 
-@router.get("/", tags=["Version"])
+@router.get("")
+@router.get("/")
 async def get_version():
     return {
         "version": os.getenv("APP_VERSION", "0.1.0"),
