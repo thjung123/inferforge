@@ -21,7 +21,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /workspace
 
 COPY builder ./builder
-COPY model_builder ./model_builder
 
 ENV MODEL_REPOSITORY=/models
 ENV REDIS_URL=redis://redis:6379/0

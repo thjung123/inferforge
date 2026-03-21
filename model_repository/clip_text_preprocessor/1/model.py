@@ -1,7 +1,7 @@
 import json
 
 import triton_python_backend_utils as pb_utils
-from model_builder.preprocessors.clip_text_preprocessor import ClipTextPreprocessor
+from builder.processors.clip.text_preprocessor import ClipTextPreprocessor
 from gateway.utils.logger import triton_logger as logger
 
 

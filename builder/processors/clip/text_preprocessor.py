@@ -1,7 +1,10 @@
+import logging
+from typing import Dict, List
+
 import numpy as np
-from typing import List, Dict
 from transformers import CLIPTokenizerFast
-from gateway.utils.logger import model_builder_logger as logger
+
+logger = logging.getLogger("builder")
 
 
 class ClipTextPreprocessor:

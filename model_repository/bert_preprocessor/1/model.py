@@ -1,7 +1,7 @@
 import json
 
 import triton_python_backend_utils as pb_utils
-from model_builder.preprocessors.bert_preprocessor import BertPreprocessor
+from builder.processors.bert.preprocessor import BertPreprocessor
 from gateway.utils.logger import triton_logger as logger
 
 

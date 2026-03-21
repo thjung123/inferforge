@@ -1,11 +1,11 @@
-Before running this,  
-you need to **generate all TensorRT `.plan` files and `config.pbtxt` files** first.  
+Before running this,
+you need to **generate all TensorRT `.plan` files and `config.pbtxt` files** first.
 These are required for Triton to load and serve your models.
 
-You can automatically build them using the conversion script inside the `model_builder/scripts` directory:
+Use the Builder API to build and deploy models:
 
 ```bash
-bash model_builder/scripts/convert_all.sh
+curl -X POST http://localhost:8090/build -H 'Content-Type: application/json' -d '{"model_type": "bert"}'
 ```
 
 The resulting folder structure under model_repository/ should look like this:

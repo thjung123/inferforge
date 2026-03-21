@@ -1,5 +1,5 @@
 import numpy as np
-from model_builder.postprocessors.clip_feature_merger import ClipFeatureMerger
+from builder.processors.clip.feature_merger import ClipFeatureMerger
 
 
 def test_clip_feature_merger_merge():
