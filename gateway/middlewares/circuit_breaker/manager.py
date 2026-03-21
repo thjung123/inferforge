@@ -1,18 +1,24 @@
-from .global_breaker import global_breaker
-from .triton_breaker import triton_breaker
-from .redis_breaker import redis_breaker
+from .base import CircuitBreaker
 
 
 class BreakerManager:
     def __init__(self):
-        self.breakers = {
-            "global": global_breaker,
-            "triton": triton_breaker,
-            "redis": redis_breaker,
-        }
+        self.breakers: dict[str, CircuitBreaker] = {}
 
-    def get(self, name: str):
+    def register(
+        self, name: str, failure_threshold: int = 5, recovery_time: int = 30
+    ) -> CircuitBreaker:
+        breaker = CircuitBreaker(
+            name=name, failure_threshold=failure_threshold, recovery_time=recovery_time
+        )
+        self.breakers[name] = breaker
+        return breaker
+
+    def get(self, name: str) -> CircuitBreaker | None:
         return self.breakers.get(name)
 
 
 breaker_manager = BreakerManager()
+breaker_manager.register("global", failure_threshold=5, recovery_time=3)
+breaker_manager.register("triton", failure_threshold=3, recovery_time=15)
+breaker_manager.register("redis", failure_threshold=5, recovery_time=10)

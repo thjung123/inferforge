@@ -1,20 +1,20 @@
 import time
-from gateway.middlewares.circuit_breaker.triton_breaker import triton_breaker
+from gateway.middlewares.circuit_breaker.manager import breaker_manager
 
 
-def test_triton_breaker_opens_after_failures():
-    cb = triton_breaker
+def test_global_breaker_opens_after_failures():
+    cb = breaker_manager.get("global")
     cb.fail_count = 0
     cb.open = False
 
     for _ in range(cb.failure_threshold):
         cb.record_failure()
 
-    assert cb.open is True, "TritonBreaker should open after threshold failures"
+    assert cb.open is True, "GlobalBreaker should open after threshold failures"
 
 
-def test_triton_breaker_recovers_after_timeout():
-    cb = triton_breaker
+def test_global_breaker_recovers_after_timeout():
+    cb = breaker_manager.get("global")
     cb.fail_count = 0
     cb.open = False
     cb.failure_threshold = 1

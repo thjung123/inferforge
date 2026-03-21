@@ -1,9 +1,9 @@
 import time
-from gateway.middlewares.circuit_breaker.redis_breaker import redis_breaker
+from gateway.middlewares.circuit_breaker.manager import breaker_manager
 
 
 def test_redis_breaker_opens_after_failures():
-    cb = redis_breaker
+    cb = breaker_manager.get("redis")
     cb.fail_count = 0
     cb.open = False
 
@@ -14,7 +14,7 @@ def test_redis_breaker_opens_after_failures():
 
 
 def test_redis_breaker_recovers_after_timeout():
-    cb = redis_breaker
+    cb = breaker_manager.get("redis")
     cb.fail_count = 0
     cb.open = False
     cb.failure_threshold = 1
