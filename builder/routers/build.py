@@ -18,6 +18,8 @@ async def build_model(
     tracker: JobTracker = Depends(get_job_tracker),
 ):
     preset = load_preset(body.model_type)
+    if body.instance_count is not None:
+        preset.setdefault("triton", {})["instance_count"] = body.instance_count
     model_name = preset["model_name"]
 
     job_id = uuid.uuid4().hex[:12]

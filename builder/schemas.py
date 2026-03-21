@@ -13,6 +13,7 @@ class JobState(str, Enum):
 
 class BuildRequest(BaseModel):
     model_type: str
+    instance_count: int | None = None
 
 
 class BuildResponse(BaseModel):
