@@ -1,4 +1,7 @@
+from functools import lru_cache
+
 import httpx
+
 from gateway.config import get_settings
 from gateway.utils.exceptions import ModelNotFoundError
 from gateway.utils.logger import gateway_logger as logger
@@ -37,3 +40,8 @@ class TritonHttpClient:
     async def close(self):
         await self._client.aclose()
         logger.info("[TritonHTTP] Connection closed")
+
+
+@lru_cache
+def get_triton_http_client() -> TritonHttpClient:
+    return TritonHttpClient()
