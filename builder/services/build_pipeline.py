@@ -4,7 +4,12 @@ from pathlib import Path
 
 from builder.config import get_builder_settings
 from builder.schemas import JobState
-from builder.services.config_generator import generate_config_pbtxt
+from builder.services.config_generator import (
+    generate_config_pbtxt,
+    generate_ensemble_config,
+    generate_processor_config,
+)
+from builder.services.dag_validator import validate_ensemble_dag
 from builder.services.job_tracker import JobTracker
 from builder.services.onnx_exporter import export_onnx
 from builder.services.triton_deployer import load_model
@@ -120,9 +125,27 @@ async def run_build_pipeline(
     else:
         targets = [dict(preset)]
 
+    ensemble_cfg = preset.get("ensemble")
+    repo_path = Path(repo)
+
     try:
         for cfg in targets:
             await _build_single_model(job_id, cfg, repo, tracker)
+
+        if ensemble_cfg:
+            await tracker.update_status(job_id, JobState.GENERATING_CONFIG)
+            logger.info(f"[{job_id}] Validating ensemble DAG ...")
+            validate_ensemble_dag(ensemble_cfg)
+
+            max_batch = ensemble_cfg.get("max_batch_size", 256)
+            for step in ensemble_cfg["steps"]:
+                if step.get("backend") == "python":
+                    await asyncio.to_thread(
+                        generate_processor_config, step, repo_path, max_batch
+                    )
+
+            await asyncio.to_thread(generate_ensemble_config, ensemble_cfg, repo_path)
+            logger.info(f"[{job_id}] Ensemble configs generated")
 
         await tracker.update_status(job_id, JobState.DEPLOYING)
         model_label = preset.get("model_name") or preset["model_type"]
@@ -130,6 +153,12 @@ async def run_build_pipeline(
 
         for cfg in targets:
             await load_model(cfg["model_name"])
+
+        if ensemble_cfg:
+            for step in ensemble_cfg["steps"]:
+                if step.get("backend") == "python":
+                    await load_model(step["model_name"])
+            await load_model(ensemble_cfg["name"])
 
         await tracker.update_status(job_id, JobState.READY)
         logger.info(f"[{job_id}] Build pipeline complete for {model_label}")
