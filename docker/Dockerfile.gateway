@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir "tritonclient[grpc]==2.61.0" --no-deps \
 
 
 COPY gateway ./gateway
-COPY model_builder ./model_builder
+COPY builder ./builder
 
 ENV WORKERS=1
 ENV THREADS=2
