@@ -1,8 +1,7 @@
-import asyncio
-import os
 from functools import lru_cache
-from typing import List, Any
+from typing import Any
 
+import numpy as np
 import torch
 from tritonclient.grpc.aio import (
     InferenceServerClient,
@@ -10,18 +9,22 @@ from tritonclient.grpc.aio import (
     InferRequestedOutput,
 )
 
+from gateway.config import get_settings
 from gateway.middlewares.circuit_breaker.manager import breaker_manager
 from gateway.middlewares.request_id import request_id_ctx
+from gateway.utils.exceptions import TritonCircuitOpenError, TritonInferenceError
 from gateway.utils.logger import gateway_logger as logger
+from gateway.utils.resilience import async_retry
 
 
 class TritonClient:
-    def __init__(self, max_retries: int = 3, base_delay: float = 0.3):
-        self.max_retries = max_retries
-        self.base_delay = base_delay
+    def __init__(self):
+        settings = get_settings()
+        self.max_retries = settings.triton_max_retries
+        self.base_delay = settings.triton_retry_base_delay
         self.triton_breaker = breaker_manager.get("triton")
 
-        self.triton_url = os.getenv("TRITON_URL", "triton:8001")
+        self.triton_url = settings.triton_url
         try:
             self.gpu_enabled = torch.cuda.is_available()
         except Exception:
@@ -37,11 +40,14 @@ class TritonClient:
         return self.client
 
     async def infer(
-        self, model_name: str, inputs: List[dict[str, Any]], output_names: list[str]
-    ) -> dict:
+        self,
+        model_name: str,
+        inputs: list[dict[str, Any]],
+        output_names: list[str],
+    ) -> dict[str, np.ndarray]:
         if not self.triton_breaker.allow_request():
             logger.warning("[TritonBreaker] Circuit open - skipping inference")
-            return {"error": "Triton circuit open - skipping inference"}
+            raise TritonCircuitOpenError()
 
         if not self.triton_enabled:
             raise RuntimeError("Triton not available on this system")
@@ -58,39 +64,39 @@ class TritonClient:
         infer_outputs = [InferRequestedOutput(name) for name in output_names]
         parameters = {"request_id": str(request_id)} if request_id else {}
 
-        for attempt in range(1, self.max_retries + 1):
-            try:
-                logger.info(
-                    f"[TritonClient] Inference attempt {attempt}/{self.max_retries} | model={model_name}"
-                )
-                response = await client.infer(
-                    model_name=model_name,
-                    inputs=infer_inputs,
-                    outputs=infer_outputs,
-                    parameters=parameters,
-                )
+        async def _do_infer():
+            response = await client.infer(
+                model_name=model_name,
+                inputs=infer_inputs,
+                outputs=infer_outputs,
+                parameters=parameters,
+            )
+            return {
+                output.name: response.as_numpy(output.name)
+                for output in response.get_response().outputs
+            }
 
-                self.triton_breaker.record_success()
-                logger.info(f"[TritonClient] Success | model={model_name}")
-                return {
-                    output.name: response.as_numpy(output.name)
-                    for output in response.get_response().outputs
-                }
+        def _on_retry(attempt: int, exc: Exception):
+            logger.warning(
+                f"[TritonClient] Attempt {attempt}/{self.max_retries} failed: {exc}"
+            )
+            self.triton_breaker.record_failure()
 
-            except Exception as e:
-                logger.warning(f"[TritonClient] Attempt {attempt} failed: {e}")
-                self.triton_breaker.record_failure()
-
-                if attempt == self.max_retries:
-                    logger.error(
-                        f"[TritonClient] All retries failed for model={model_name}"
-                    )
-                    return {"error": str(e)}
-                await asyncio.sleep(self.base_delay * (2 ** (attempt - 1)))
-        logger.error(
-            f"[TritonClient] No response after {self.max_retries} attempts | model={model_name}"
-        )
-        return {"error": f"No response after {self.max_retries} attempts"}
+        try:
+            result = await async_retry(
+                _do_infer,
+                max_retries=self.max_retries,
+                base_delay=self.base_delay,
+                on_retry=_on_retry,
+            )
+            self.triton_breaker.record_success()
+            logger.info(f"[TritonClient] Success | model={model_name}")
+            return result
+        except Exception as e:
+            logger.error(
+                f"[TritonClient] All retries failed for model={model_name}: {e}"
+            )
+            raise TritonInferenceError(detail=f"Inference failed for {model_name}: {e}")
 
 
 @lru_cache

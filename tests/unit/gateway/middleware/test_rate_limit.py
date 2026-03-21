@@ -31,4 +31,6 @@ async def test_rate_limit_exceeded(monkeypatch):
     resp = await rate_limiter(req, call_next)
     assert resp.status_code == 429
     data = json.loads(resp.body)
-    assert data["detail"] == "Rate limit exceeded"
+    assert data["error"] == "Rate limit exceeded"
+    assert data["status_code"] == 429
+    assert "request_id" in data

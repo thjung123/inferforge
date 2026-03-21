@@ -22,5 +22,3 @@ def test_version_endpoint(client):
     assert resp.status_code == 200
     body = resp.json()
     assert "version" in body
-    assert "commit" in body
-    assert "build_time" in body

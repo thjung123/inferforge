@@ -1,5 +1,5 @@
 [project]
-name = "triton-inference-service"
+name = "inferforge"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -23,8 +23,8 @@ dependencies = [
     "redis>=6.4.0",
     "requests>=2.32.5",
     "setuptools>=80.9.0",
-    "tenacity>=9.1.2",
     "torch>=2.8.0",
+    "tritonclient[grpc]>=2.51.0",
     "transformers>=4.57.1",
     "types-pyyaml>=6.0.12.20250915",
     "uvicorn>=0.37.0",
