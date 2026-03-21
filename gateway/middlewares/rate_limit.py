@@ -2,7 +2,7 @@ from typing import cast, Awaitable, Any
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from gateway.clients.redis_client import RedisClient
+from gateway.clients.redis_client import get_redis_client
 from gateway.config import get_settings
 from gateway.middlewares.request_id import request_id_ctx
 from gateway.utils.logger import gateway_logger as logger
@@ -21,7 +21,7 @@ async def rate_limiter(request: Request, call_next):
     settings = get_settings()
     client_ip = request.client.host if request.client else "unknown"
     key = f"rate:{client_ip}"
-    redis = await RedisClient.get_instance()
+    redis = await get_redis_client()
 
     try:
         count = await cast(

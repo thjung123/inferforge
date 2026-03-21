@@ -2,8 +2,7 @@ import pytest
 import numpy as np
 from fastapi.testclient import TestClient
 from gateway.main import app
-from gateway.services.inference_service import InferenceService
-from gateway.clients.triton_client import get_triton_client
+from gateway.services.inference_service import InferenceService, get_inference_service
 
 
 @pytest.fixture(scope="module")
@@ -23,11 +22,11 @@ def override_service(monkeypatch):
 
     monkeypatch.setattr(InferenceService, "run_inference", mock_run_inference)
 
-    dependency_overrides = getattr(app, "dependency_overrides", {})
-    dependency_overrides[get_triton_client] = lambda: None
+    mock_service = InferenceService(client=None)
+    app.dependency_overrides[get_inference_service] = lambda: mock_service
 
     yield
-    dependency_overrides.clear()
+    app.dependency_overrides.clear()
 
 
 def test_infer_bert(client, override_service):

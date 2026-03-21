@@ -2,7 +2,9 @@ import time
 
 import numpy as np
 
-from gateway.clients.triton_client import TritonClient
+from fastapi import Depends
+
+from gateway.clients.triton_client import TritonClient, get_triton_client
 from gateway.utils.exceptions import InvalidInputError
 from gateway.utils.logger import gateway_logger as logger
 
@@ -29,3 +31,9 @@ class InferenceService:
             f"result_keys={list(raw_result.keys())}"
         )
         return raw_result
+
+
+def get_inference_service(
+    client: TritonClient = Depends(get_triton_client),
+) -> InferenceService:
+    return InferenceService(client)
