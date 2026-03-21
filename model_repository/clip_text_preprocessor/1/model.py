@@ -1,14 +1,17 @@
 import json
 
 import triton_python_backend_utils as pb_utils
-from model_builder.preprocessors.clip_text_preprocessor import ClipTextPreprocessor
+from builder.processors.clip.text_preprocessor import ClipTextPreprocessor
 from gateway.utils.logger import triton_logger as logger
 
 
 class TritonPythonModel:
     def initialize(self, args):
-        logger.info("Initializing ClipTextPreprocessor")
-        self.processor = ClipTextPreprocessor()
+        model_config = json.loads(args["model_config"])
+        params = model_config.get("parameters", {})
+        max_length = int(params.get("max_length", {}).get("string_value", "77"))
+        logger.info(f"Initializing ClipTextPreprocessor (max_length={max_length})")
+        self.processor = ClipTextPreprocessor(max_length=max_length)
 
     def execute(self, requests):
         responses = []

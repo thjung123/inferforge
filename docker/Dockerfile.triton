@@ -8,7 +8,7 @@ COPY pyproject.toml ./
 RUN uv pip install --system --break-system-packages .
 
 COPY gateway ./gateway
-COPY model_builder ./model_builder
+COPY builder ./builder
 
 
 ENV TRITON_MODEL_REPOSITORY=/models

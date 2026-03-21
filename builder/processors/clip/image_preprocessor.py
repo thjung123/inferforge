@@ -1,10 +1,13 @@
-import io
 import asyncio
+import io
+import logging
+from typing import List, Union
+
 import aiohttp
 import numpy as np
 from PIL import Image
-from typing import List, Union
-from gateway.utils.logger import model_builder_logger as logger
+
+logger = logging.getLogger("builder")
 
 
 class ClipImagePreprocessor:

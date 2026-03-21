@@ -35,3 +35,45 @@ dynamic_shapes:
     min: [1, 1]
     opt: [4, 128]
     max: [32, 512]
+
+ensemble:
+  name: bert_ensemble
+  max_batch_size: 256
+  inputs:
+    - name: TEXTS
+      datatype: STRING
+      dims: [-1]
+  outputs:
+    - name: bert_emb
+      datatype: FP32
+      dims: [768]
+  steps:
+    - model_name: bert_preprocessor
+      backend: python
+      instance_kind: KIND_CPU
+      params:
+        max_length: 128
+      inputs:
+        - name: TEXTS
+          datatype: STRING
+          dims: [-1]
+      outputs:
+        - name: INPUT_IDS
+          datatype: INT32
+        - name: ATTENTION_MASK
+          datatype: INT32
+        - name: TOKEN_TYPE_IDS
+          datatype: INT32
+      input_map:
+        TEXTS: TEXTS
+      output_map:
+        INPUT_IDS: INPUT_IDS
+        ATTENTION_MASK: ATTENTION_MASK
+        TOKEN_TYPE_IDS: TOKEN_TYPE_IDS
+    - model_name: bert_engine
+      input_map:
+        input_ids: INPUT_IDS
+        attention_mask: ATTENTION_MASK
+        token_type_ids: TOKEN_TYPE_IDS
+      output_map:
+        pooled_output: bert_emb
