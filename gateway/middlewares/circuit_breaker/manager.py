@@ -14,8 +14,11 @@ class BreakerManager:
         self.breakers[name] = breaker
         return breaker
 
-    def get(self, name: str) -> CircuitBreaker | None:
-        return self.breakers.get(name)
+    def get(self, name: str) -> CircuitBreaker:
+        breaker = self.breakers.get(name)
+        if breaker is None:
+            raise KeyError(f"CircuitBreaker '{name}' not registered")
+        return breaker
 
 
 breaker_manager = BreakerManager()
