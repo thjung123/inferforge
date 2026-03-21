@@ -7,8 +7,11 @@ from gateway.utils.logger import triton_logger as logger
 
 class TritonPythonModel:
     def initialize(self, args):
-        logger.info("Initializing BertPreprocessor")
-        self.processor = BertPreprocessor()
+        model_config = json.loads(args["model_config"])
+        params = model_config.get("parameters", {})
+        max_length = int(params.get("max_length", {}).get("string_value", "128"))
+        logger.info(f"Initializing BertPreprocessor (max_length={max_length})")
+        self.processor = BertPreprocessor(max_length=max_length)
 
     def execute(self, requests):
         responses = []
