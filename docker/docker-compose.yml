@@ -29,6 +29,28 @@ services:
       - "8001:8001"
       - "8002:8002"
 
+  builder:
+    container_name: builder
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.builder
+    volumes:
+      - ../model_repository:/models
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - MODEL_REPOSITORY=/models
+      - TRITON_HTTP_URL=http://triton:8000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    depends_on:
+      - redis
+      - triton
+
   gateway:
     container_name: gateway
     build:
