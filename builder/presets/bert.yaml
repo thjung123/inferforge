@@ -1,0 +1,37 @@
+model_type: bert
+source: "google-bert/bert-base-uncased"
+model_name: bert_engine
+
+inputs:
+  - name: input_ids
+    shape: [-1, -1]
+    datatype: INT64
+  - name: attention_mask
+    shape: [-1, -1]
+    datatype: INT64
+  - name: token_type_ids
+    shape: [-1, -1]
+    datatype: INT64
+
+outputs:
+  - name: last_hidden_state
+    shape: [-1, -1, 768]
+    datatype: FP32
+
+precision:
+  default: fp16
+
+dynamic_shapes:
+  enabled: true
+  input_ids:
+    min: [1, 1]
+    opt: [4, 128]
+    max: [32, 512]
+  attention_mask:
+    min: [1, 1]
+    opt: [4, 128]
+    max: [32, 512]
+  token_type_ids:
+    min: [1, 1]
+    opt: [4, 128]
+    max: [32, 512]
