@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class BuilderSettings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     model_repository: str = "/models"
+    triton_http_url: str = "http://triton:8000"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

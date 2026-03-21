@@ -7,6 +7,7 @@ from builder.schemas import JobState
 from builder.services.config_generator import generate_config_pbtxt
 from builder.services.job_tracker import JobTracker
 from builder.services.onnx_exporter import export_onnx
+from builder.services.triton_deployer import load_model
 
 logger = logging.getLogger("builder")
 
@@ -123,7 +124,13 @@ async def run_build_pipeline(
         for cfg in targets:
             await _build_single_model(job_id, cfg, repo, tracker)
 
+        await tracker.update_status(job_id, JobState.DEPLOYING)
         model_label = preset.get("model_name") or preset["model_type"]
+        logger.info(f"[{job_id}] Loading models into Triton ...")
+
+        for cfg in targets:
+            await load_model(cfg["model_name"])
+
         await tracker.update_status(job_id, JobState.READY)
         logger.info(f"[{job_id}] Build pipeline complete for {model_label}")
 

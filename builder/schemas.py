@@ -7,6 +7,7 @@ class JobState(str, Enum):
     BUILDING_ONNX = "building_onnx"
     BUILDING_TRT = "building_trt"
     GENERATING_CONFIG = "generating_config"
+    DEPLOYING = "deploying"
     READY = "ready"
     FAILED = "failed"
 
