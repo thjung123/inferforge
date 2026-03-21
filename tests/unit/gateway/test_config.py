@@ -2,11 +2,14 @@ from gateway.config import get_settings, Settings
 
 
 def test_default_settings_values():
-    settings = get_settings()
-    assert settings.triton_url == "http://localhost:8001"
+    settings = Settings()
+    assert settings.triton_url == "triton:8001"
     assert settings.redis_url == "redis://localhost:6379"
     assert settings.jwt_secret == "default_secret"
     assert isinstance(settings.api_key_whitelist, list)
+    assert settings.rate_limit == 20
+    assert settings.rate_window == 3
+    assert settings.triton_max_retries == 3
 
 
 def test_env_file_loading(monkeypatch):

@@ -49,3 +49,7 @@ class RedisClient:
         redis = await cls.get_instance()
         result = await redis.incr(key)
         return result
+
+
+async def get_redis_client() -> Redis:
+    return await RedisClient.get_instance()

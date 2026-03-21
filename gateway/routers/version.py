@@ -1,14 +1,18 @@
+from pathlib import Path
+
+import tomllib
 from fastapi import APIRouter
-import os
 
 router = APIRouter(redirect_slashes=False)
+
+_pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+with open(_pyproject, "rb") as f:
+    _version = tomllib.load(f)["project"]["version"]
 
 
 @router.get("")
 @router.get("/")
 async def get_version():
     return {
-        "version": os.getenv("APP_VERSION", "0.1.0"),
-        "commit": os.getenv("GIT_COMMIT", "unknown"),
-        "build_time": os.getenv("BUILD_TIME", "unknown"),
+        "version": _version,
     }

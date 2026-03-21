@@ -18,6 +18,31 @@ class InvalidInputError(HTTPException):
         super().__init__(status_code=400, detail=detail)
 
 
+class BuildError(HTTPException):
+    def __init__(self, detail: str = "Model build failed"):
+        super().__init__(status_code=500, detail=detail)
+
+
+class ModelNotFoundError(HTTPException):
+    def __init__(self, detail: str = "Model not found"):
+        super().__init__(status_code=404, detail=detail)
+
+
+class BuilderUnavailableError(HTTPException):
+    def __init__(self, detail: str = "Builder service unavailable"):
+        super().__init__(status_code=502, detail=detail)
+
+
+class TritonCircuitOpenError(HTTPException):
+    def __init__(self, detail: str = "Triton circuit breaker is open"):
+        super().__init__(status_code=503, detail=detail)
+
+
+class TritonInferenceError(HTTPException):
+    def __init__(self, detail: str = "Triton inference failed after retries"):
+        super().__init__(status_code=502, detail=detail)
+
+
 async def http_exception_handler(request: Request, exc: Exception):
     request_id = request_id_ctx.get()
     if isinstance(exc, HTTPException):
@@ -72,6 +97,11 @@ def register_exception_handlers(app):
         (RequestValidationError, http_exception_handler),
         (TritonConnectionError, http_exception_handler),
         (InvalidInputError, http_exception_handler),
+        (BuildError, http_exception_handler),
+        (ModelNotFoundError, http_exception_handler),
+        (BuilderUnavailableError, http_exception_handler),
+        (TritonCircuitOpenError, http_exception_handler),
+        (TritonInferenceError, http_exception_handler),
         (Exception, generic_exception_handler),
     ]
     for exc_class, handler in handlers:

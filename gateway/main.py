@@ -7,14 +7,14 @@ from gateway.middlewares.request_id import add_request_id
 from gateway.middlewares.auth import auth_middleware
 from gateway.middlewares.rate_limit import rate_limiter
 from gateway.middlewares.metrics import metrics_middleware
-from gateway.clients.redis_client import RedisClient
+from gateway.clients.redis_client import RedisClient, get_redis_client
 from gateway.utils.exceptions import register_exception_handlers
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("[Startup] Initializing Redis connection...")
-    await RedisClient.get_instance()
+    await get_redis_client()
     yield
     print("[Shutdown] Closing Redis connection...")
     await RedisClient.close()

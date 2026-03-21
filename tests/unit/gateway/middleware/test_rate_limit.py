@@ -18,9 +18,9 @@ async def test_rate_limit_under_threshold():
 
 @pytest.mark.asyncio
 async def test_rate_limit_exceeded(monkeypatch):
-    from gateway.clients.redis_client import RedisClient
+    from gateway.clients.redis_client import get_redis_client
 
-    fake = await RedisClient.get_instance()
+    fake = await get_redis_client()
     fake.counter = 101
 
     req = Request({"type": "http", "client": ("127.0.0.1", 5000), "headers": []})
@@ -31,4 +31,6 @@ async def test_rate_limit_exceeded(monkeypatch):
     resp = await rate_limiter(req, call_next)
     assert resp.status_code == 429
     data = json.loads(resp.body)
-    assert data["detail"] == "Rate limit exceeded"
+    assert data["error"] == "Rate limit exceeded"
+    assert data["status_code"] == 429
+    assert "request_id" in data

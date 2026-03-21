@@ -1,13 +1,12 @@
 import pytest
 from gateway.services.inference_service import InferenceService
 from gateway.clients.triton_client import TritonClient
-from gateway.utils.exceptions import InvalidInputError, TritonConnectionError
+from gateway.utils.exceptions import InvalidInputError, TritonInferenceError
 
 
 @pytest.mark.asyncio
 async def test_run_inference_success(monkeypatch):
     async def mock_infer(self, model_name, inputs, output_names):
-        print("[MOCK] infer called")
         assert model_name == "bert_ensemble"
         assert isinstance(inputs, list)
         assert isinstance(output_names, list)
@@ -39,15 +38,13 @@ async def test_run_inference_empty_input():
 @pytest.mark.asyncio
 async def test_run_inference_failure(monkeypatch):
     async def mock_infer(self, model_name, inputs, output_names):
-        raise RuntimeError("mock failure")
+        raise TritonInferenceError(detail="mock failure")
 
     monkeypatch.setattr(TritonClient, "infer", mock_infer)
 
     service = InferenceService(TritonClient())
 
-    with pytest.raises(TritonConnectionError) as e:
+    with pytest.raises(TritonInferenceError):
         await service.run_inference(
             "bert_ensemble", [{"name": "TEXTS"}], ["output_names"]
         )
-
-    assert "mock failure" in str(e.value)

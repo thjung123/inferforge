@@ -19,3 +19,5 @@ docker/.env
 **/aws_connect.md
 **/Dockerfile.custom-*
 **/.plan
+
+docs/local/
