@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     triton_url: str = "triton:8001"
     triton_http_url: str = "http://localhost:8000"
     builder_url: str = "http://localhost:8090"
+    vllm_primary_url: str = "http://vllm-primary:8100"
+    vllm_fallback_url: str = "http://vllm-fallback:8101"
     redis_url: str = "redis://localhost:6379"
     jwt_secret: str = "default_secret"
     api_key_whitelist: list[str] = []

@@ -51,6 +51,64 @@ services:
       - redis
       - triton
 
+  vllm-primary:
+    container_name: vllm-primary
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vllm
+    command:
+      - "--model"
+      - "${VLLM_PRIMARY_MODEL:-Qwen/Qwen2.5-7B-Instruct}"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8100"
+      - "--max-model-len"
+      - "${VLLM_PRIMARY_MAX_MODEL_LEN:-4096}"
+    env_file:
+      - ../.env.vllm
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    shm_size: 4g
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    expose:
+      - "8100"
+
+  vllm-fallback:
+    container_name: vllm-fallback
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vllm
+    command:
+      - "--model"
+      - "${VLLM_FALLBACK_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8101"
+      - "--max-model-len"
+      - "${VLLM_FALLBACK_MAX_MODEL_LEN:-4096}"
+    env_file:
+      - ../.env.vllm
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    shm_size: 2g
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    expose:
+      - "8101"
+
   gateway:
     container_name: gateway
     build:
@@ -64,6 +122,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - API_KEY_WHITELIST=["test-key"]
       - TRITON_URL=triton:8001
+      - VLLM_PRIMARY_URL=http://vllm-primary:8100
+      - VLLM_FALLBACK_URL=http://vllm-fallback:8101
       - NVIDIA_VISIBLE_DEVICES=all
     deploy:
       resources:
@@ -75,3 +135,8 @@ services:
     depends_on:
       - redis
       - triton
+      - vllm-primary
+      - vllm-fallback
+
+volumes:
+  hf_cache:
