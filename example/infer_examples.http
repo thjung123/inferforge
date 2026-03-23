@@ -16,6 +16,32 @@ x-api-key: test-key
   }
 }
 
+### Run LLM Generate
+POST http://localhost:8080/generate
+Content-Type: application/json
+x-api-key: test-key
+
+{
+  "messages": [
+    {"role": "user", "content": "Explain what TensorRT is in 2 sentences."}
+  ],
+  "max_tokens": 128,
+  "temperature": 0.7
+}
+
+### Run LLM Generate (Streaming)
+POST http://localhost:8080/generate
+Content-Type: application/json
+x-api-key: test-key
+
+{
+  "messages": [
+    {"role": "user", "content": "Count from 1 to 10."}
+  ],
+  "max_tokens": 64,
+  "stream": true
+}
+
 ### Run CLIP Ensemble Inference
 POST http://localhost:8080/infer/
 Content-Type: application/json
