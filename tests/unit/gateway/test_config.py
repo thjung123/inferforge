@@ -7,8 +7,11 @@ def test_default_settings_values():
     assert settings.redis_url == "redis://localhost:6379"
     assert settings.jwt_secret == "default_secret"
     assert isinstance(settings.api_key_whitelist, list)
-    assert settings.rate_limit == 20
-    assert settings.rate_window == 3
+    assert settings.rate_limit_infer == 120
+    assert settings.rate_limit_generate == 60
+    assert settings.rate_window == 60
+    assert settings.concurrency_limit_generate_primary == 16
+    assert settings.concurrency_limit_generate_fallback == 8
     assert settings.triton_max_retries == 3
 
 

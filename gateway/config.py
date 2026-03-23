@@ -12,8 +12,12 @@ class Settings(BaseSettings):
     jwt_secret: str = "default_secret"
     api_key_whitelist: list[str] = []
 
-    rate_limit: int = 20
-    rate_window: int = 3
+    rate_limit_infer: int = 120
+    rate_limit_generate: int = 60
+    rate_window: int = 60
+    concurrency_limit_infer: int = 64
+    concurrency_limit_generate_primary: int = 16
+    concurrency_limit_generate_fallback: int = 8
     triton_max_retries: int = 3
     triton_retry_base_delay: float = 0.3
 

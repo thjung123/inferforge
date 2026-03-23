@@ -5,7 +5,7 @@ from gateway.middlewares.circuit_breaker.middleware import circuit_breaker_middl
 from gateway.routers import generate, health, inference, models, version
 from gateway.middlewares.request_id import add_request_id
 from gateway.middlewares.auth import auth_middleware
-from gateway.middlewares.rate_limit import rate_limiter
+from gateway.middlewares.throttle import throttle_middleware
 from gateway.middlewares.metrics import metrics_middleware
 from gateway.clients.builder_client import get_builder_client
 from gateway.clients.redis_client import RedisClient, get_redis_client
@@ -43,7 +43,7 @@ app.include_router(version.router, prefix="/version", tags=["Version"])
 app.middleware("http")(add_request_id)
 app.middleware("http")(auth_middleware)
 app.middleware("http")(circuit_breaker_middleware)
-app.middleware("http")(rate_limiter)
+app.middleware("http")(throttle_middleware)
 app.middleware("http")(metrics_middleware)
 
 register_exception_handlers(app)

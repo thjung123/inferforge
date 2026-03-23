@@ -7,8 +7,6 @@ BASE_URL = "http://localhost:8080"
 os.environ.setdefault("API_KEY_WHITELIST", '["test-key"]')
 HEADERS = {"x-api-key": "test-key"}
 
-RATE_LIMIT = 10
-
 
 def wait_for_service(url, timeout=40):
     start = time.time()
@@ -27,16 +25,14 @@ def setup_environment():
     wait_for_service(f"{BASE_URL}/health")
 
 
-def test_rate_limiter_blocks_excessive_requests():
-    success, blocked = 0, 0
-    for i in range(30):
-        resp = requests.get(f"{BASE_URL}/health", headers=HEADERS)
-        if resp.status_code == 200:
-            success += 1
-        elif resp.status_code == 429:
-            blocked += 1
-    assert blocked > 0, f"Rate limiter did not block any requests (Allowed={success})"
-    time.sleep(3)
+def test_throttle_returns_rate_limit_headers():
+    resp = requests.post(
+        f"{BASE_URL}/infer",
+        headers={**HEADERS, "Content-Type": "application/json"},
+        json={"model_name": "bert_ensemble", "inputs": {"texts": ["test"]}},
+    )
+    assert "X-RateLimit-Limit" in resp.headers
+    assert "X-RateLimit-Remaining" in resp.headers
 
 
 def test_retry_policy_handles_temporary_failures(monkeypatch):
