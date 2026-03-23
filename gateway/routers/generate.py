@@ -1,39 +1,21 @@
-import asyncio
 import logging
+import time
 
 import httpx
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from gateway.clients.vllm_client import VLLMClient, get_vllm_fallback, get_vllm_primary
-from gateway.config import get_settings
+from gateway.middlewares.adaptive_concurrency import (
+    get_fallback_limiter,
+    get_primary_limiter,
+)
 from gateway.middlewares.circuit_breaker.manager import breaker_manager
 from gateway.schemas.generation import GenerateRequest, GenerateResponse
 from gateway.services.generation_service import GenerationService
 
 router = APIRouter()
 logger = logging.getLogger("gateway")
-
-_primary_sem: asyncio.Semaphore | None = None
-_fallback_sem: asyncio.Semaphore | None = None
-
-
-def _get_primary_sem() -> asyncio.Semaphore:
-    global _primary_sem
-    if _primary_sem is None:
-        _primary_sem = asyncio.Semaphore(
-            get_settings().concurrency_limit_generate_primary
-        )
-    return _primary_sem
-
-
-def _get_fallback_sem() -> asyncio.Semaphore:
-    global _fallback_sem
-    if _fallback_sem is None:
-        _fallback_sem = asyncio.Semaphore(
-            get_settings().concurrency_limit_generate_fallback
-        )
-    return _fallback_sem
 
 
 def _get_primary_service(
@@ -89,12 +71,15 @@ async def generate(
         )
 
     # --- Non-streaming: primary → fallback → 503 ---
-    if not use_fallback:
-        p_sem = _get_primary_sem()
-        if not p_sem.locked():
+    p_limiter = get_primary_limiter()
+    f_limiter = get_fallback_limiter()
+
+    if not use_fallback and p_limiter.is_available():
+        acquired = await p_limiter.acquire()
+        if acquired:
+            start = time.time()
             try:
-                async with p_sem:
-                    result = await _try_generate(primary, model, req)
+                result = await _try_generate(primary, model, req)
                 vllm_breaker.record_success()
                 return _build_response(result, model)
             except (
@@ -104,21 +89,34 @@ async def generate(
             ) as exc:
                 vllm_breaker.record_failure()
                 logger.warning(f"[Fallback] Primary failed ({exc}), trying fallback")
-        else:
-            logger.info("[Fallback] Primary concurrency full, trying fallback")
+            finally:
+                p_limiter.release(time.time() - start)
+    elif not use_fallback:
+        logger.info(
+            f"[Adaptive] Primary at capacity "
+            f"(limit={p_limiter.current_limit}, in_flight={p_limiter.in_flight}, "
+            f"avg_latency={p_limiter.avg_latency:.3f}s), trying fallback"
+        )
 
     # Fallback
-    f_sem = _get_fallback_sem()
-    if f_sem.locked():
-        logger.warning("[Throttle] Both primary and fallback concurrency full")
+    if not f_limiter.is_available():
+        logger.warning(
+            f"[Throttle] All at capacity "
+            f"(primary={p_limiter.current_limit}, fallback={f_limiter.current_limit})"
+        )
         return JSONResponse(
             status_code=503,
             content={"error": "Server busy, all models at capacity"},
             headers={"Retry-After": "1"},
         )
 
-    async with f_sem:
+    await f_limiter.acquire()
+    start = time.time()
+    try:
         result = await _try_generate(fallback, model, req)
+    finally:
+        f_limiter.release(time.time() - start)
+
     return _build_response(result, model)
 
 

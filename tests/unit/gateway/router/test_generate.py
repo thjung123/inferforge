@@ -1,4 +1,3 @@
-import asyncio
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -84,29 +83,37 @@ async def test_generate_fallback_on_primary_failure(mock_app):
 
 @pytest.mark.asyncio
 async def test_generate_503_when_all_at_capacity(mock_app):
-    """Both primary and fallback semaphores full → 503."""
-    import gateway.routers.generate as gen_module
+    """Both primary and fallback limiters full → 503."""
+    from unittest.mock import patch
+
+    from gateway.middlewares.adaptive_concurrency import AdaptiveConcurrencyLimiter
 
     mock_app.dependency_overrides[get_vllm_primary] = _make_failing_client
     mock_app.dependency_overrides[get_vllm_fallback] = lambda: _make_mock_client(
         FALLBACK_RESULT
     )
 
-    # Force fallback semaphore to 0 capacity
-    original_fallback = gen_module._fallback_sem
-    gen_module._fallback_sem = asyncio.Semaphore(0)
+    # Create a limiter that is always full
+    full_limiter = AdaptiveConcurrencyLimiter(initial_limit=1)
+    await full_limiter.acquire()  # fill it
 
-    transport = ASGITransport(app=mock_app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post(
-            "/generate",
-            json={"messages": [{"role": "user", "content": "Hi"}]},
-        )
+    with (
+        patch(
+            "gateway.routers.generate.get_primary_limiter", return_value=full_limiter
+        ),
+        patch(
+            "gateway.routers.generate.get_fallback_limiter", return_value=full_limiter
+        ),
+    ):
+        transport = ASGITransport(app=mock_app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                "/generate",
+                json={"messages": [{"role": "user", "content": "Hi"}]},
+            )
 
     assert resp.status_code == 503
     assert "all models at capacity" in resp.json()["error"]
-
-    gen_module._fallback_sem = original_fallback
     mock_app.dependency_overrides.clear()
 
 
