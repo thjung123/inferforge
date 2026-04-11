@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     concurrency_limit_generate_fallback: int = 8
     triton_max_retries: int = 3
     triton_retry_base_delay: float = 0.3
+    minio_endpoint: str = "minio:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_bucket: str = "lora-adapters"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

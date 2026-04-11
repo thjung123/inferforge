@@ -2,7 +2,7 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from gateway.middlewares.circuit_breaker.middleware import circuit_breaker_middleware
-from gateway.routers import generate, health, inference, models, version
+from gateway.routers import generate, health, inference, lora, models, version
 from gateway.middlewares.request_id import add_request_id
 from gateway.middlewares.auth import auth_middleware
 from gateway.middlewares.throttle import throttle_middleware
@@ -37,6 +37,7 @@ app.include_router(health.router, prefix="/health", tags=["Health"])
 app.include_router(inference.router, prefix="/infer", tags=["Inference"])
 app.include_router(models.router, prefix="/models", tags=["Models"])
 app.include_router(generate.router, prefix="/generate", tags=["Generate"])
+app.include_router(lora.router, prefix="/lora", tags=["LoRA"])
 app.include_router(version.router, prefix="/version", tags=["Version"])
 
 

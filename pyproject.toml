@@ -28,6 +28,7 @@ dependencies = [
     "transformers>=4.57.1",
     "types-pyyaml>=6.0.12.20250915",
     "uvicorn>=0.37.0",
+    "minio>=7.2.20",
 ]
 
 
