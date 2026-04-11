@@ -1,102 +1,221 @@
-# Triton Inference Service
+# InferForge
 
-A production-ready inference serving platform built on **FastAPI** and **NVIDIA Triton Inference Server**.  
+End-to-end ML inference platform — automated model building, high-performance serving, and LLM integration on a single self-hosted stack.
 
-It provides an easy-to-use API gateway, automated model conversion, and performance tools — enabling you to deploy and scale multimodal models (e.g., image & text) in production with minimal effort.
+## TL;DR
 
----
+- **Automated build pipeline** that converts HuggingFace models to TensorRT engines and deploys to Triton — one API call
+- **Dual inference backends**: TensorRT ensembles for embeddings, vLLM for LLM generation with SSE streaming
+- **Traffic resilience**: sliding window rate limiting, adaptive concurrency control, circuit breaker with graceful degradation (7B → 1.5B fallback)
+- **Multi-LoRA**: pull-based adapter sync across GPU pods — Redis registry + MinIO storage + sidecar polling
+## Why This Exists
 
-## Overview
+Deploying ML models in production involves stitching together disparate systems — model conversion, serving infrastructure, traffic management, adapter lifecycle. Each piece is well-solved individually, but integrating them into a coherent platform requires careful design.
 
-This project aims to simplify end-to-end inference deployment:
+InferForge unifies this into a single stack:
 
-- **FastAPI Gateway** – Entry point for REST API requests with validation, retry, and structured logging  
-- **Triton Inference Server** – High-performance serving of ONNX/TensorRT models with ensemble support  
-- **Model Conversion Tools** – Export PyTorch models to ONNX → TensorRT with precision optimization
-
----
-
-## Prerequisites
-
-Before you start, make sure you have the following installed:
-
-- Python 3.12+
-- uv – Python environment & dependency manager  
-- Docker & Docker Compose  
-- NVIDIA GPU driver (for TensorRT & GPU inference)
-
----
-
-## Local Development Setup
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/thjung123/triton-inference-service.git
-cd triton-inference-service
+```
+POST /build {"model_type": "bert"}
+  → HuggingFace download → ONNX export → TensorRT compile
+  → Ensemble config generation (DAG-validated)
+  → Triton deployment (auto-load)
+  → Ready for inference
 ```
 
-### 2. Initialize the Python environment
+The core idea: **model onboarding is a pipeline, not a manual process**. Define a preset, and the system handles everything from weights to serving.
 
-We use uv for environment and dependency management.
+## Architecture
+
+```mermaid
+graph TB
+    Client([Client]) --> Gateway
+
+    subgraph InferForge
+        Gateway[Gateway<br/>Auth · Throttle · Circuit Breaker<br/>Adaptive Concurrency]
+
+        Gateway -->|embedding| Triton[Triton<br/>Ensemble · TensorRT]
+        Gateway -->|LLM| vLLM[vLLM<br/>Primary 7B / Fallback 1.5B]
+        Gateway -->|model register| Builder
+        Gateway -->|cache · throttle · LoRA| Redis
+
+        Builder[Builder<br/>HF → ONNX → TRT] -->|build & load| Triton
+        Builder --> Redis[(Redis<br/>Registry · Jobs · Cache)]
+
+        LoRASync[LoRA Sync Sidecar] -->|poll registry| Redis
+        LoRASync -->|download weights| MinIO[(MinIO / S3)]
+        LoRASync -->|load adapter| vLLM
+    end
+```
+
+## Core Components
+
+| Component | Role | Key Detail |
+|---|---|---|
+| Gateway | API entry point, traffic management | FastAPI with auth, adaptive concurrency, circuit breaker |
+| Triton | Embedding/vision inference | Ensemble pipelines: preprocessor → TensorRT engine → postprocessor |
+| vLLM | LLM text generation | SSE streaming, primary/fallback with graceful degradation |
+| Builder | Model build automation | HF → ONNX → TRT → config.pbtxt → Triton deploy |
+| LoRA Sync | Adapter lifecycle across pods | Pull-based: poll Redis → download from MinIO → load into vLLM |
+
+## Build Pipeline
+
+The Builder automates the full path from HuggingFace to production serving:
+
+```
+POST /build {"model_type": "bert"}
+
+PENDING → BUILDING_ONNX → BUILDING_TRT → GENERATING_CONFIG → DEPLOYING → READY
+
+1. Download from HuggingFace
+2. Export to ONNX (dynamic axes, shape inference)
+3. Compile to TensorRT (trtexec, fp16/int8, dynamic shapes)
+4. Generate config.pbtxt (engine + processor + ensemble)
+5. DAG validation (verify tensor connectivity across steps)
+6. Deploy to Triton (load each submodel + ensemble)
+```
+
+**Ensemble example — BERT:**
+```
+TEXTS → bert_preprocessor (tokenizer, python_backend)
+      → bert_engine (TensorRT, fp16)
+      → bert_emb (pooled_output)
+```
+
+Build status is tracked via Redis with TTL expiration. Query with `GET /build/{job_id}`.
+
+## Traffic Resilience
+
+### Sliding Window Rate Limiting
+
+Redis sorted set per client IP × endpoint. Unlike fixed-window counters, prevents burst at window boundaries.
+
+| Endpoint | Limit | Window |
+|---|---|---|
+| `/infer` | 120 req | 60s |
+| `/generate` | 60 req | 60s |
+
+Response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After`
+
+### Adaptive Concurrency Control
+
+Static semaphores can't adapt to GPU load. The adaptive limiter measures response latency and adjusts:
+
+```
+latency < target × 0.7 → increase limit (+2)
+latency > target        → decrease limit (×0.75)
+```
+
+Separate limiters for primary and fallback models. When primary is saturated, excess requests route to fallback automatically.
+
+### Graceful Degradation
+
+```
+Request → Primary (7B) available?
+            ├─ YES → process
+            │         └─ failure → fallback
+            └─ NO  → Fallback (1.5B) available?
+                       ├─ YES → degraded response
+                       └─ NO  → 503 "all models at capacity"
+```
+
+Circuit breaker detects sustained failures and short-circuits directly to fallback.
+
+## Multi-LoRA Adapter Management
+
+Pull-based sync pattern — same architecture used in large-scale production (100+ pods):
+
+```
+1. Register:  POST /lora/register → Redis metadata store
+2. Upload:    Adapter weights → MinIO (S3-compatible)
+3. Sync:      Each pod's sidecar polls Redis every 30s
+                → detects new/updated adapter
+                → downloads from MinIO
+                → calls vLLM load_lora_adapter
+4. Remove:    DELETE /lora/{name} → Redis
+                → next poll cycle → pods unload adapter
+```
+
+| API | Action |
+|---|---|
+| `POST /lora/register` | Register adapter (auto-increments version) |
+| `DELETE /lora/{name}` | Remove adapter (pods unload on next poll) |
+| `GET /lora` | List all registered adapters |
+| `GET /lora/{name}` | Get adapter details |
+
+Use in inference: `POST /generate {"lora_adapter": "ko-chat", ...}`
+
+## Project Structure
+
+```
+inferforge/
+├── gateway/                 # API Gateway (FastAPI)
+│   ├── routers/             # inference, generate, models, lora, health
+│   ├── services/            # inference_service, generation_service, lora_registry
+│   ├── middlewares/         # throttle, circuit_breaker, adaptive_concurrency
+│   ├── clients/             # triton, vllm, redis, builder HTTP clients
+│   └── schemas/             # request/response models
+├── builder/                 # Build Pipeline Service
+│   ├── services/            # build_pipeline, config_generator, dag_validator, onnx_exporter
+│   ├── processors/          # Triton python_backend processors (bert/, clip/)
+│   └── presets/             # Model preset definitions (YAML)
+├── lora_sync/               # LoRA sync sidecar
+├── docker/                  # Dockerfiles + docker-compose
+├── model_repository/        # Triton model repository
+├── example/                 # Usage examples
+└── tests/
+    ├── unit/                # Unit tests (80+)
+    └── integration/         # Integration tests (Docker-based)
+```
+
+## Getting Started
 
 ```bash
-uv init
+# Clone and setup
+git clone https://github.com/thjung123/inferforge.git
+cd inferforge
 uv sync
-```
 
-This will create a virtual environment and install all required dependencies.
-
-## Run Locally (with Docker Compose)
-
-Before running the containers, make sure the TensorRT `.plan` files and `config.pbtxt` are built.  
-These files are **not included in the repository**.  
-You can generate them by running the following script:
-
-```bash
-bash model_builder/scripts/convert_all.sh
-```
-This script will:
-- Download model weights (.pt)
-- Export them to ONNX
-- Build optimized TensorRT engines
-- Generate Triton config.pbtxt files under model_repository/
-
-Once the models are ready, you can start the full stack:
-
-This will start:
-- FastAPI gateway on http://localhost:8080
-- Redis (for rate limiting) on localhost:6379
-- Triton Inference Server on http://localhost:8001
-
-```bash
+# Start all services
 docker-compose -f docker/docker-compose.yml up --build
-```
 
+# Register and build a model
+curl -X POST http://localhost:8080/models/register \
+  -H "x-api-key: test-key" -H "Content-Type: application/json" \
+  -d '{"model_type": "bert"}'
 
-
-Then, you can test the API:
-```bash
+# Embedding inference
 curl -X POST http://localhost:8080/infer \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: test-key" \
-  -d '{
-    "model_name": "clip_ensemble",
-    "inputs": {
-      "image_urls": [
-        "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg",
-        "https://upload.wikimedia.org/wikipedia/commons/4/47/Golden_Retriever_Carlos_%2810591010556%29.jpg"
-      ],
-      "texts": [
-        "a photo of a cat",
-        "a photo of a dog"
-      ]
-    }
-  }' | jq .
+  -H "x-api-key: test-key" -H "Content-Type: application/json" \
+  -d '{"model_name": "bert_ensemble", "inputs": {"texts": ["Hello world"]}}'
+
+# LLM generation
+curl -X POST http://localhost:8080/generate \
+  -H "x-api-key: test-key" -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Explain TensorRT."}], "max_tokens": 128}'
 ```
 
-### Running Tests
-Run unit and integration tests using pytest:
+## Testing
+
 ```bash
-uv run pytest -v
+uv run pytest -v tests/unit          # Unit tests
+uv run pytest -v tests/integration   # Integration tests (requires Docker)
 ```
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| API Gateway | FastAPI, Gunicorn |
+| Embedding Inference | NVIDIA Triton, TensorRT |
+| LLM Inference | vLLM |
+| Model Building | ONNX, TensorRT (trtexec) |
+| Adapter Storage | MinIO (S3-compatible) |
+| State/Cache | Redis |
+| Containerization | Docker, Docker Compose |
+| Testing | pytest, httpx, Testcontainers |
+
+## Production Notes
+
+- **LoRA adapter registry** uses Redis + MinIO here. In production, replace with a persistent model registry (e.g. MLflow, Vertex AI) and S3/GCS for adapter storage.
+- **Adapter sync** uses a pull-based pattern — each vLLM pod polls the registry and downloads from object storage. Same pattern used at scale in production systems.
+- **Adaptive concurrency** dynamically adjusts GPU concurrency limits based on response latency, preventing saturation under variable load.

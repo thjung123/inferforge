@@ -21,3 +21,7 @@ docker/.env
 **/.plan
 
 docs/local/
+
+# Benchmark results (CSV data, not in git)
+benchmarks/results/*.csv
+benchmarks/results/**/*.csv
