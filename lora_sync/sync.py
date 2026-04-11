@@ -31,10 +31,10 @@ _REGISTRY_INDEX = "lora:adapters"
 
 
 async def _get_registered_adapters(redis: Redis) -> dict[str, dict[str, str]]:
-    names: set[str] = await redis.smembers(_REGISTRY_INDEX)  # type: ignore[assignment]
+    names: set[str] = await redis.smembers(_REGISTRY_INDEX)  # type: ignore[misc]
     adapters = {}
     for name in names:
-        data: dict[str, str] = await redis.hgetall(f"{_REGISTRY_PREFIX}{name}")  # type: ignore[assignment]
+        data: dict[str, str] = await redis.hgetall(f"{_REGISTRY_PREFIX}{name}")  # type: ignore[misc]
         if data and data.get("status") == "active":
             adapters[name] = data
     return adapters
