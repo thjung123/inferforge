@@ -1,8 +1,4 @@
-"""LoRA sync sidecar — polls Redis registry, downloads adapters from MinIO,
-and loads/unloads them in the local vLLM instance.
-
-Runs as a standalone process alongside each vLLM pod.
-"""
+"""LoRA sync sidecar — reconciles the Redis registry into the local vLLM instance."""
 
 import asyncio
 import json
@@ -24,10 +20,13 @@ MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "lora-adapters")
 VLLM_URL = os.getenv("VLLM_URL", "http://localhost:8100")
 ADAPTER_DIR = Path(os.getenv("ADAPTER_DIR", "/adapters"))
-POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "30"))
+RECONCILE_INTERVAL = int(
+    os.getenv("RECONCILE_INTERVAL", os.getenv("POLL_INTERVAL", "300"))
+)
 
 _REGISTRY_PREFIX = "lora:adapter:"
 _REGISTRY_INDEX = "lora:adapters"
+_REGISTRY_CHANNEL = "lora:events"
 
 
 async def _get_registered_adapters(redis: Redis) -> dict[str, dict[str, str]]:
@@ -41,7 +40,6 @@ async def _get_registered_adapters(redis: Redis) -> dict[str, dict[str, str]]:
 
 
 def _get_local_state() -> dict[str, int]:
-    """Read local state file to know which adapters/versions are loaded."""
     state_file = ADAPTER_DIR / ".sync_state.json"
     if state_file.exists():
         return json.loads(state_file.read_text())
@@ -103,7 +101,6 @@ async def sync_once(redis: Redis, minio_client: Minio) -> None:
     registered = await _get_registered_adapters(redis)
     local_state = _get_local_state()
 
-    # Load new or updated adapters
     for name, data in registered.items():
         version = int(data.get("version", "1"))
         local_version = local_state.get(name, 0)
@@ -112,13 +109,21 @@ async def sync_once(redis: Redis, minio_client: Minio) -> None:
             logger.info(
                 f"[Sync] New/updated adapter: {name} v{local_version} → v{version}"
             )
+            if local_version > 0:
+                if not await _unload_lora(name):
+                    logger.warning(
+                        f"[Sync] Unload of {name} v{local_version} failed; "
+                        f"skipping reload this cycle"
+                    )
+                    continue
+                local_state[name] = 0
+                _save_local_state(local_state)
             local_path = await asyncio.to_thread(
                 _download_adapter, minio_client, data["s3_path"], name
             )
             if await _load_lora(name, local_path):
                 local_state[name] = version
 
-    # Unload removed adapters
     for name in list(local_state.keys()):
         if name not in registered:
             logger.info(f"[Sync] Adapter removed from registry: {name}")
@@ -128,10 +133,40 @@ async def sync_once(redis: Redis, minio_client: Minio) -> None:
     _save_local_state(local_state)
 
 
+_sync_lock = asyncio.Lock()
+
+
+async def _safe_sync(redis: Redis, minio_client: Minio, reason: str) -> None:
+    async with _sync_lock:
+        try:
+            await sync_once(redis, minio_client)
+        except Exception as e:
+            logger.error(f"[Sync] Error during sync ({reason}): {e}")
+
+
+async def _listen(redis: Redis, minio_client: Minio) -> None:
+    """React immediately to registry pub/sub events."""
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(_REGISTRY_CHANNEL)
+    logger.info(f"[Sync] Subscribed to {_REGISTRY_CHANNEL}")
+    async for message in pubsub.listen():
+        if message.get("type") != "message":
+            continue
+        logger.info(f"[Sync] Registry event: {message.get('data')}")
+        await _safe_sync(redis, minio_client, "event")
+
+
+async def _reconcile_loop(redis: Redis, minio_client: Minio) -> None:
+    """Periodic full reconcile."""
+    while True:
+        await asyncio.sleep(RECONCILE_INTERVAL)
+        await _safe_sync(redis, minio_client, "reconcile")
+
+
 async def run() -> None:
     logger.info(
         f"[Sync] Starting LoRA sync sidecar "
-        f"(poll={POLL_INTERVAL}s, vllm={VLLM_URL})"
+        f"(pub/sub={_REGISTRY_CHANNEL}, reconcile={RECONCILE_INTERVAL}s, vllm={VLLM_URL})"
     )
 
     redis = Redis.from_url(REDIS_URL, encoding="utf-8", decode_responses=True)
@@ -142,18 +177,16 @@ async def run() -> None:
         secure=False,
     )
 
-    # Ensure bucket exists
     if not minio_client.bucket_exists(MINIO_BUCKET):
         minio_client.make_bucket(MINIO_BUCKET)
         logger.info(f"[Sync] Created MinIO bucket: {MINIO_BUCKET}")
 
     try:
-        while True:
-            try:
-                await sync_once(redis, minio_client)
-            except Exception as e:
-                logger.error(f"[Sync] Error during sync: {e}")
-            await asyncio.sleep(POLL_INTERVAL)
+        await _safe_sync(redis, minio_client, "startup")
+        await asyncio.gather(
+            _listen(redis, minio_client),
+            _reconcile_loop(redis, minio_client),
+        )
     finally:
         await redis.close()
 
