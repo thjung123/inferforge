@@ -1,6 +1,12 @@
 from pathlib import Path
+from unittest.mock import AsyncMock
 
-from builder.services.build_pipeline import _build_trtexec_command
+import httpx
+import pytest
+
+import builder.services.build_pipeline as build_pipeline
+from builder.schemas import JobState
+from builder.services.build_pipeline import _build_trtexec_command, run_build_pipeline
 
 
 def test_trtexec_command_fp16():
@@ -61,3 +67,39 @@ def test_trtexec_command_dynamic_shapes():
     assert len(max_flag) == 1
     assert "input_ids:" in min_flag[0]
     assert "mask:" in min_flag[0]
+
+
+class _FakeSettings:
+    model_repository = "/tmp/repo"
+    triton_http_url = "http://triton:8000"
+    push_to_object_store = False
+
+
+@pytest.mark.asyncio
+async def test_precision_validation_error_fails_closed(monkeypatch):
+    preset = {
+        "model_type": "bert",
+        "source": "src",
+        "model_name": "encoder",
+        "inputs": [],
+        "outputs": [{"name": "logits"}],
+    }
+
+    monkeypatch.setattr(build_pipeline, "get_builder_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(
+        build_pipeline, "_build_single_model", AsyncMock(return_value=None)
+    )
+    monkeypatch.setattr(build_pipeline, "load_model", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        build_pipeline,
+        "_validate_precision",
+        AsyncMock(side_effect=httpx.ConnectError("triton unreachable")),
+    )
+
+    tracker = AsyncMock()
+
+    await run_build_pipeline("job-1", preset, tracker)
+
+    tracker.set_failed.assert_awaited_once()
+    statuses = [call.args[1] for call in tracker.update_status.await_args_list]
+    assert JobState.READY not in statuses

@@ -1,6 +1,10 @@
+import asyncio
 import uvicorn
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
+from gateway.config import get_settings
 from gateway.middlewares.circuit_breaker.middleware import circuit_breaker_middleware
 from gateway.routers import generate, health, inference, lora, models, version
 from gateway.middlewares.request_id import add_request_id
@@ -12,14 +16,26 @@ from gateway.clients.redis_client import RedisClient, get_redis_client
 from gateway.clients.triton_http_client import get_triton_http_client
 from gateway.clients.vllm_client import get_vllm_fallback, get_vllm_primary
 from gateway.utils.exceptions import register_exception_handlers
+from gateway.utils.logger import gateway_logger as logger
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("[Startup] Initializing Redis connection...")
+    logger.info("[Startup] Initializing Redis connection...")
     await get_redis_client()
+
+    reaper_task = None
+    settings = get_settings()
+    if settings.enable_tiering:
+        from gateway.services.tiering_actions import run_reaper
+
+        reaper_task = asyncio.create_task(run_reaper(settings.tiering_reaper_interval))
+
     yield
-    print("[Shutdown] Closing connections...")
+
+    logger.info("[Shutdown] Closing connections...")
+    if reaper_task:
+        reaper_task.cancel()
     await get_builder_client().close()
     await get_triton_http_client().close()
     await get_vllm_primary().close()
@@ -41,11 +57,16 @@ app.include_router(lora.router, prefix="/lora", tags=["LoRA"])
 app.include_router(version.router, prefix="/version", tags=["Version"])
 
 
-app.middleware("http")(add_request_id)
-app.middleware("http")(auth_middleware)
+@app.get("/metrics")
+async def metrics() -> Response:
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 app.middleware("http")(circuit_breaker_middleware)
 app.middleware("http")(throttle_middleware)
+app.middleware("http")(auth_middleware)
 app.middleware("http")(metrics_middleware)
+app.middleware("http")(add_request_id)
 
 register_exception_handlers(app)
 

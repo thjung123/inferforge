@@ -8,17 +8,19 @@ class DAGValidationError(Exception):
     pass
 
 
-def validate_ensemble_dag(ensemble_cfg: dict[str, Any]) -> None:
+def validate_ensemble_dag(
+    ensemble_cfg: dict[str, Any],
+    model_outputs: dict[str, set[str]] | None = None,
+) -> None:
+    """Validate an ensemble's tensor wiring."""
     ensemble_name = ensemble_cfg["name"]
     steps = ensemble_cfg["steps"]
 
-    # Available tensors start with ensemble-level inputs
     available: set[str] = {inp["name"] for inp in ensemble_cfg["inputs"]}
 
     for step in steps:
         model_name = step["model_name"]
 
-        # Check every input_map value exists in available tensors
         for local_name, tensor_name in step["input_map"].items():
             if tensor_name not in available:
                 raise DAGValidationError(
@@ -28,11 +30,19 @@ def validate_ensemble_dag(ensemble_cfg: dict[str, Any]) -> None:
                     f"Available: {sorted(available)}"
                 )
 
-        # Register output_map values as available
+        if model_outputs is not None and model_name in model_outputs:
+            declared = model_outputs[model_name]
+            for local_name in step["output_map"]:
+                if local_name not in declared:
+                    raise DAGValidationError(
+                        f"[{ensemble_name}] step '{model_name}' output_map key "
+                        f"'{local_name}' is not an output of '{model_name}'. "
+                        f"Declared outputs: {sorted(declared)}"
+                    )
+
         for local_name, tensor_name in step["output_map"].items():
             available.add(tensor_name)
 
-    # Check ensemble outputs are all produced
     for out in ensemble_cfg["outputs"]:
         if out["name"] not in available:
             raise DAGValidationError(

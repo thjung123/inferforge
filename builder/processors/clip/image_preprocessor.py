@@ -9,6 +9,9 @@ from PIL import Image
 
 logger = logging.getLogger("builder")
 
+_CLIP_MEAN = np.array([0.48145466, 0.4578275, 0.40821073], dtype=np.float32)
+_CLIP_STD = np.array([0.26862954, 0.26130258, 0.27577711], dtype=np.float32)
+
 
 class ClipImagePreprocessor:
     def __init__(self, image_size: int = 224):
@@ -19,15 +22,14 @@ class ClipImagePreprocessor:
     ) -> Union[np.ndarray, None]:
         try:
             timeout = aiohttp.ClientTimeout(total=5)
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=timeout) as resp:
-                    if resp.status != 200:
-                        logger.warning(
-                            f"[Preprocessor] Failed to fetch image: {url} ({resp.status})"
-                        )
-                        return None
-                    content = await resp.read()
-                    return self._process_image_bytes(content)
+            async with session.get(url, timeout=timeout) as resp:
+                if resp.status != 200:
+                    logger.warning(
+                        f"[Preprocessor] Failed to fetch image: {url} ({resp.status})"
+                    )
+                    return None
+                content = await resp.read()
+                return self._process_image_bytes(content)
         except Exception as e:
             logger.error(f"[Preprocessor] Error fetching image {url}: {e}")
             return None
@@ -36,8 +38,9 @@ class ClipImagePreprocessor:
         try:
             image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
             image = image.resize((self.image_size, self.image_size))
-            arr = np.array(image).astype(np.float32) / 255.0  # normalize to [0,1]
-            arr = arr.transpose(2, 0, 1)  # HWC → CHW
+            arr = np.array(image).astype(np.float32) / 255.0
+            arr = (arr - _CLIP_MEAN) / _CLIP_STD
+            arr = arr.transpose(2, 0, 1)
             return arr
         except Exception as e:
             logger.error(f"[Preprocessor] Failed to process image bytes: {e}")

@@ -30,5 +30,4 @@ def setup_logger(scope: str, level=logging.INFO) -> logging.Logger:
     return logger
 
 
-triton_logger = setup_logger("triton", level=logging.INFO)
 gateway_logger = setup_logger("gateway", level=logging.INFO)

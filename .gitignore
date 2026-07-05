@@ -21,7 +21,11 @@ docker/.env
 **/.plan
 
 docs/local/
+TODO.md
 
 # Benchmark results (CSV data, not in git)
 benchmarks/results/*.csv
 benchmarks/results/**/*.csv
+
+performance/results/
+perf_out/

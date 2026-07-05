@@ -1,0 +1,16 @@
+name: "bert_postprocessor"
+backend: "python"
+max_batch_size: 256
+
+input [
+  { name: "last_hidden_state" data_type: TYPE_FP32 dims: [128, 768] },
+  { name: "attention_mask" data_type: TYPE_INT32 dims: [128] }
+]
+
+output [
+  { name: "bert_emb" data_type: TYPE_FP32 dims: [768] }
+]
+
+instance_group [
+  { kind: KIND_CPU }
+]

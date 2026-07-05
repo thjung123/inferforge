@@ -100,3 +100,35 @@ def test_real_clip_preset():
         preset = yaml.safe_load(f)
 
     validate_ensemble_dag(preset["ensemble"])
+
+
+def test_output_map_key_not_a_model_output_fails():
+    """output_map key that the model does not actually produce must fail —
+    this is the pooled_output-vs-last_hidden_state class that name-connectivity
+    alone misses and Triton only rejects at load time."""
+    cfg = _make_ensemble(
+        steps=[
+            {
+                "model_name": "encoder",
+                "input_map": {"x": "IN"},
+                "output_map": {"pooled_output": "OUT"},
+            },
+        ]
+    )
+    model_outputs = {"encoder": {"last_hidden_state"}}
+    with pytest.raises(DAGValidationError, match="pooled_output"):
+        validate_ensemble_dag(cfg, model_outputs)
+
+
+def test_output_map_key_valid_output_passes():
+    cfg = _make_ensemble(
+        steps=[
+            {
+                "model_name": "encoder",
+                "input_map": {"x": "IN"},
+                "output_map": {"last_hidden_state": "OUT"},
+            },
+        ]
+    )
+    model_outputs = {"encoder": {"last_hidden_state"}}
+    validate_ensemble_dag(cfg, model_outputs)  # should not raise

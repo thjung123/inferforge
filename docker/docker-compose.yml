@@ -4,8 +4,17 @@ services:
   redis:
     container_name: redis
     image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
     expose:
       - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
 
   triton:
     container_name: triton
@@ -14,6 +23,7 @@ services:
       dockerfile: docker/Dockerfile.triton
     volumes:
       - ../model_repository:/models
+    # prod: --model-repository=s3://http://minio:9000/model-repository (needs AWS_* creds)
     shm_size: 1g
     deploy:
       resources:
@@ -40,6 +50,11 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - MODEL_REPOSITORY=/models
       - TRITON_HTTP_URL=http://triton:8000
+      - PUSH_TO_OBJECT_STORE=true
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MODEL_BUCKET=model-repository
     deploy:
       resources:
         reservations:
@@ -50,14 +65,15 @@ services:
     depends_on:
       - redis
       - triton
+      - minio
 
   minio:
     container_name: minio
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - minio_data:/data
     ports:
@@ -80,7 +96,7 @@ services:
       - "${VLLM_PRIMARY_MAX_MODEL_LEN:-4096}"
       - "--enable-lora"
     env_file:
-      - ../.env.vllm
+      - .env.vllm
     volumes:
       - hf_cache:/root/.cache/huggingface
       - lora_adapters:/adapters
@@ -110,7 +126,7 @@ services:
       - "--max-model-len"
       - "${VLLM_FALLBACK_MAX_MODEL_LEN:-4096}"
     env_file:
-      - ../.env.vllm
+      - .env.vllm
     volumes:
       - hf_cache:/root/.cache/huggingface
     shm_size: 2g
@@ -135,8 +151,10 @@ services:
       - "8080:8080"
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - API_KEY_WHITELIST=["test-key"]
+      - API_KEY_WHITELIST=${API_KEY_WHITELIST:-["test-key"]}
+      - JWT_SECRET=${JWT_SECRET:-}
       - TRITON_URL=triton:8001
+      - BUILDER_URL=http://builder:8090
       - VLLM_PRIMARY_URL=http://vllm-primary:8100
       - VLLM_FALLBACK_URL=http://vllm-fallback:8101
       - NVIDIA_VISIBLE_DEVICES=all
@@ -152,8 +170,31 @@ services:
       - triton
       - vllm-primary
       - vllm-fallback
+    restart: unless-stopped
+
+  lora-sync:
+    container_name: lora-sync
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.lora-sync
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET=lora-adapters
+      - VLLM_URL=http://vllm-primary:8100
+      - ADAPTER_DIR=/adapters
+    volumes:
+      - lora_adapters:/adapters
+    depends_on:
+      - redis
+      - minio
+      - vllm-primary
+    restart: unless-stopped
 
 volumes:
   hf_cache:
   minio_data:
   lora_adapters:
+  redis_data:

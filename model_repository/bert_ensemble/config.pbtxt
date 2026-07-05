@@ -3,19 +3,11 @@ platform: "ensemble"
 max_batch_size: 256
 
 input [
-  {
-    name: "TEXTS"
-    data_type: TYPE_STRING
-    dims: [ -1 ]
-  }
+  { name: "TEXTS" data_type: TYPE_STRING dims: [-1] }
 ]
 
 output [
-  {
-    name: "bert_emb"
-    data_type: TYPE_FP32
-    dims: [ 768 ]
-  }
+  { name: "bert_emb" data_type: TYPE_FP32 dims: [768] }
 ]
 
 ensemble_scheduling {
@@ -56,7 +48,23 @@ ensemble_scheduling {
         value: "TOKEN_TYPE_IDS"
       }
       output_map {
-        key: "pooled_output"
+        key: "last_hidden_state"
+        value: "last_hidden_state"
+      }
+    },
+    {
+      model_name: "bert_postprocessor"
+      model_version: -1
+      input_map {
+        key: "last_hidden_state"
+        value: "last_hidden_state"
+      }
+      input_map {
+        key: "attention_mask"
+        value: "ATTENTION_MASK"
+      }
+      output_map {
+        key: "bert_emb"
         value: "bert_emb"
       }
     }

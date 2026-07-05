@@ -9,23 +9,27 @@ class CircuitBreaker:
         self.fail_count = 0
         self.last_failure: float | None = None
         self.open = False
+        self.half_open = False
 
     def record_failure(self):
         self.fail_count += 1
         self.last_failure = time.time()
-        if self.fail_count >= self.failure_threshold:
+        if self.half_open or self.fail_count >= self.failure_threshold:
             self.open = True
+            self.half_open = False
 
     def record_success(self):
         self.fail_count = 0
         self.open = False
+        self.half_open = False
         self.last_failure = None
 
     def allow_request(self) -> bool:
         if not self.open:
             return True
         if self.last_failure and time.time() - self.last_failure > self.recovery_time:
-            self.open = False
-            self.fail_count = 0
-            return True
+            if not self.half_open:
+                self.half_open = True
+                return True
+            return False
         return False

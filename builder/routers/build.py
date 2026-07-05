@@ -11,6 +11,8 @@ from builder.services.preset_loader import load_preset
 
 router = APIRouter()
 
+_build_tasks: set = set()
+
 
 @router.post("/build", status_code=HTTP_202_ACCEPTED, response_model=BuildResponse)
 async def build_model(
@@ -20,13 +22,15 @@ async def build_model(
     preset = load_preset(body.model_type)
     if body.instance_count is not None:
         preset.setdefault("triton", {})["instance_count"] = body.instance_count
-    model_name = preset["model_name"]
+    model_name = preset.get("model_name") or preset.get("model_type") or "model"
 
     job_id = uuid.uuid4().hex[:12]
 
     await tracker.create(job_id, model_name)
 
-    asyncio.create_task(run_build_pipeline(job_id, preset, tracker))
+    task = asyncio.create_task(run_build_pipeline(job_id, preset, tracker))
+    _build_tasks.add(task)
+    task.add_done_callback(_build_tasks.discard)
 
     return BuildResponse(
         job_id=job_id,

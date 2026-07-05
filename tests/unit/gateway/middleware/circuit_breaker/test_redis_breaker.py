@@ -24,6 +24,13 @@ def test_redis_breaker_recovers_after_timeout():
     assert cb.allow_request() is False
 
     time.sleep(1.1)
+    # recovery window elapsed → one probe allowed (half-open), others still blocked
     assert cb.allow_request() is True
+    assert cb.half_open is True
+    assert cb.allow_request() is False
+
+    # a successful probe fully closes the breaker
+    cb.record_success()
     assert cb.open is False
+    assert cb.half_open is False
     assert cb.fail_count == 0

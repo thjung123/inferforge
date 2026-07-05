@@ -1,32 +1,20 @@
-import logging
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends
 
 from gateway.schemas.lora import LoRAAdapterResponse, LoRARegisterRequest
-from gateway.services.lora_registry import (
-    LoRAAdapter,
-    get_adapter,
-    list_adapters,
-    register_adapter,
-    remove_adapter,
-)
+from gateway.services.lora_registry import LoRARegistryService, get_lora_registry
+from gateway.utils.exceptions import ModelNotFoundError
 
 router = APIRouter()
-logger = logging.getLogger("gateway")
 
 
 @router.post("/register", response_model=LoRAAdapterResponse)
-async def register(req: LoRARegisterRequest):
-    existing = await get_adapter(req.name)
-    version = (existing.version + 1) if existing else 1
-
-    adapter = LoRAAdapter(
-        name=req.name,
-        base_model=req.base_model,
-        s3_path=req.s3_path,
-        version=version,
+async def register(
+    req: LoRARegisterRequest,
+    registry: LoRARegistryService = Depends(get_lora_registry),
+):
+    adapter = await registry.register_adapter_atomic(
+        req.name, req.base_model, req.s3_path
     )
-    await register_adapter(adapter)
 
     return LoRAAdapterResponse(
         name=adapter.name,
@@ -38,16 +26,21 @@ async def register(req: LoRARegisterRequest):
 
 
 @router.delete("/{name}")
-async def remove(name: str):
-    deleted = await remove_adapter(name)
+async def remove(
+    name: str,
+    registry: LoRARegistryService = Depends(get_lora_registry),
+):
+    deleted = await registry.remove_adapter(name)
     if not deleted:
-        raise HTTPException(status_code=404, detail=f"Adapter '{name}' not found")
+        raise ModelNotFoundError(detail=f"Adapter '{name}' not found")
     return {"message": f"Adapter '{name}' removed"}
 
 
 @router.get("", response_model=list[LoRAAdapterResponse])
-async def list_all():
-    adapters = await list_adapters()
+async def list_all(
+    registry: LoRARegistryService = Depends(get_lora_registry),
+):
+    adapters = await registry.list_adapters()
     return [
         LoRAAdapterResponse(
             name=a.name,
@@ -61,10 +54,13 @@ async def list_all():
 
 
 @router.get("/{name}", response_model=LoRAAdapterResponse)
-async def get(name: str):
-    adapter = await get_adapter(name)
+async def get(
+    name: str,
+    registry: LoRARegistryService = Depends(get_lora_registry),
+):
+    adapter = await registry.get_adapter(name)
     if not adapter:
-        raise HTTPException(status_code=404, detail=f"Adapter '{name}' not found")
+        raise ModelNotFoundError(detail=f"Adapter '{name}' not found")
     return LoRAAdapterResponse(
         name=adapter.name,
         base_model=adapter.base_model,

@@ -11,7 +11,6 @@ from gateway.config import get_settings
 from gateway.middlewares.request_id import request_id_ctx
 from gateway.utils.logger import gateway_logger as logger
 
-# Sliding window rate limit via Redis sorted set
 _LUA_SLIDING_WINDOW = """
 local key = KEYS[1]
 local now = tonumber(ARGV[1])
@@ -24,18 +23,17 @@ local count = redis.call("ZCARD", key)
 if count < limit then
     redis.call("ZADD", key, now, now .. ":" .. math.random(1, 1000000))
     redis.call("EXPIRE", key, window)
-    return {count + 1, limit, 0}
+    return {1, count + 1, limit, 0}
 else
     local oldest = redis.call("ZRANGE", key, 0, 0, "WITHSCORES")
     local retry_after = 0
     if #oldest >= 2 then
         retry_after = math.ceil(tonumber(oldest[2]) + window - now)
     end
-    return {count, limit, retry_after}
+    return {0, count, limit, retry_after}
 end
 """
 
-# Concurrency semaphores per endpoint
 _semaphores: dict[str, asyncio.Semaphore] = {}
 
 _THROTTLE_PATHS = {"/infer", "/generate"}
@@ -70,7 +68,6 @@ async def throttle_middleware(request: Request, call_next) -> Response:
     client_ip = request.client.host if request.client else "unknown"
     rate_limit, window = _get_rate_config(endpoint)
 
-    # --- Sliding window rate limit ---
     try:
         redis = await get_redis_client()
         key = f"throttle:{endpoint}:{client_ip}"
@@ -82,17 +79,19 @@ async def throttle_middleware(request: Request, call_next) -> Response:
                 _LUA_SLIDING_WINDOW, 1, key, str(now), str(window), str(rate_limit)
             ),
         )
-        current, limit, retry_after = int(result[0]), int(result[1]), int(result[2])
+        allowed = int(result[0])
+        current, limit, retry_after = int(result[1]), int(result[2]), int(result[3])
         remaining = max(0, limit - current)
 
     except Exception as e:
         logger.warning(f"[Throttle] Redis unavailable, skipping rate limit: {e}")
+        allowed = 1
         remaining = -1
         limit = rate_limit
         retry_after = 0
         current = 0
 
-    if current > limit:
+    if allowed == 0:
         request_id = request_id_ctx.get()
         logger.warning(
             f"[Throttle] Rate limit exceeded: {endpoint} client={client_ip} "
@@ -113,7 +112,6 @@ async def throttle_middleware(request: Request, call_next) -> Response:
             },
         )
 
-    # /generate manages its own concurrency (primary → fallback → 503)
     if endpoint == "generate":
         response = await call_next(request)
     else:

@@ -1,16 +1,14 @@
 import hashlib
 import json
-import logging
 from typing import Any, Awaitable, cast
 
 from redis.asyncio import Redis
 
 from gateway.clients.redis_client import get_redis_client
-
-logger = logging.getLogger("gateway")
+from gateway.utils.logger import gateway_logger as logger
 
 _CACHE_PREFIX = "emb_cache:"
-_DEFAULT_TTL = 3600  # 1 hour
+_DEFAULT_TTL = 3600
 
 
 def _make_key(model_name: str, inputs: dict[str, Any]) -> str:

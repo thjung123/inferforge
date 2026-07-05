@@ -67,7 +67,7 @@ async def http_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={
-            "error": str(exc),
+            "error": "Internal server error",
             "status_code": 500,
             "request_id": str(request_id),
         },
@@ -84,7 +84,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={
-            "error": str(exc),
+            "error": "Internal server error",
             "status_code": 500,
             "request_id": str(request_id),
         },
@@ -95,13 +95,6 @@ def register_exception_handlers(app):
     handlers = [
         (StarletteHTTPException, http_exception_handler),
         (RequestValidationError, http_exception_handler),
-        (TritonConnectionError, http_exception_handler),
-        (InvalidInputError, http_exception_handler),
-        (BuildError, http_exception_handler),
-        (ModelNotFoundError, http_exception_handler),
-        (BuilderUnavailableError, http_exception_handler),
-        (TritonCircuitOpenError, http_exception_handler),
-        (TritonInferenceError, http_exception_handler),
         (Exception, generic_exception_handler),
     ]
     for exc_class, handler in handlers:
