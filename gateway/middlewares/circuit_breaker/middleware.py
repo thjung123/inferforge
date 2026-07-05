@@ -3,9 +3,9 @@ from gateway.middlewares.circuit_breaker.manager import breaker_manager
 from gateway.utils.logger import gateway_logger as logger
 
 
-def _select_breaker(path: str) -> str:
+def _select_breaker(path: str) -> str | None:
     if path.startswith("/generate"):
-        return "vllm"
+        return None
     if path.startswith("/infer"):
         return "triton"
     return "global"
@@ -13,12 +13,16 @@ def _select_breaker(path: str) -> str:
 
 async def circuit_breaker_middleware(request: Request, call_next):
     breaker_name = _select_breaker(request.url.path)
+    if breaker_name is None:
+        return await call_next(request)
+
     breaker = breaker_manager.get(breaker_name)
     if not breaker.allow_request():
         logger.warning(
             f"[CircuitBreaker:{breaker_name}] Request blocked - circuit OPEN"
         )
         return Response("Circuit open", status_code=503)
+
     try:
         response = await call_next(request)
         if response.status_code >= 500:

@@ -2,7 +2,7 @@ import json
 
 import triton_python_backend_utils as pb_utils
 from builder.processors.bert.preprocessor import BertPreprocessor
-from gateway.utils.logger import triton_logger as logger
+from common.logger import triton_logger as logger
 
 
 class TritonPythonModel:

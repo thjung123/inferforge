@@ -8,6 +8,7 @@ class JobState(str, Enum):
     BUILDING_TRT = "building_trt"
     GENERATING_CONFIG = "generating_config"
     DEPLOYING = "deploying"
+    VALIDATING_PRECISION = "validating_precision"
     READY = "ready"
     FAILED = "failed"
 

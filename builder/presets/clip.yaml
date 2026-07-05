@@ -4,19 +4,26 @@ source: "openai/clip-vit-base-patch32"
 submodels:
   - model_name: clip_text
     export_target: text_model
+    triton:
+      max_batch_size: 32
+      instance_count: 1
     inputs:
       - name: input_ids
         shape: [-1, -1]
-        datatype: INT64
+        datatype: INT32
       - name: attention_mask
         shape: [-1, -1]
-        datatype: INT64
+        datatype: INT32
     outputs:
       - name: text_embeds
         shape: [-1, 512]
         datatype: FP32
     precision:
       default: fp16
+      validation:
+        min_cosine: 0.999
+        max_abs_err: 0.1
+        num_samples: 8
     dynamic_shapes:
       enabled: true
       input_ids:
@@ -30,6 +37,9 @@ submodels:
 
   - model_name: clip_visual
     export_target: vision_model
+    triton:
+      max_batch_size: 32
+      instance_count: 1
     inputs:
       - name: pixel_values
         shape: [-1, 3, 224, 224]
@@ -40,6 +50,10 @@ submodels:
         datatype: FP32
     precision:
       default: fp16
+      validation:
+        min_cosine: 0.999
+        max_abs_err: 0.1
+        num_samples: 8
     dynamic_shapes:
       enabled: true
       pixel_values:
@@ -49,7 +63,7 @@ submodels:
 
 ensemble:
   name: clip_ensemble
-  max_batch_size: 256
+  max_batch_size: 32
   inputs:
     - name: IMAGE_URLS
       datatype: STRING
@@ -109,7 +123,7 @@ ensemble:
         text_embeds: TEXT_EMB
     - model_name: clip_feature_merger
       backend: python
-      instance_kind: KIND_GPU
+      instance_kind: KIND_CPU
       inputs:
         - name: image_emb
           datatype: FP32

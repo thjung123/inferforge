@@ -9,9 +9,13 @@ input [
 ]
 
 output [
-  { name: "last_hidden_state" data_type: TYPE_FP32 dims: [128, 768] },
-  { name: "pooled_output" data_type: TYPE_FP32 dims: [768] }
+  { name: "last_hidden_state" data_type: TYPE_FP32 dims: [128, 768] }
 ]
+
+dynamic_batching {
+  preferred_batch_size: [4, 8, 16]
+  max_queue_delay_microseconds: 1000
+}
 
 instance_group [
   { kind: KIND_GPU count: 1 }

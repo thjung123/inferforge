@@ -1,28 +1,12 @@
 # InferForge
 
-End-to-end ML inference platform — automated model building, high-performance serving, and LLM integration on a single self-hosted stack.
+A self-hosted inference stack for embedding and generative models. It builds
+HuggingFace models into TensorRT engines served on Triton, fronts them with a
+FastAPI gateway (auth, rate limiting, adaptive concurrency, circuit breaker), and
+runs vLLM for text generation with a 7B → 1.5B fallback.
 
-## TL;DR
-
-- **Automated build pipeline** that converts HuggingFace models to TensorRT engines and deploys to Triton — one API call
-- **Dual inference backends**: TensorRT ensembles for embeddings, vLLM for LLM generation with SSE streaming
-- **Traffic resilience**: sliding window rate limiting, adaptive concurrency control, circuit breaker with graceful degradation (7B → 1.5B fallback)
-- **Multi-LoRA**: pull-based adapter sync across GPU pods — Redis registry + MinIO storage + sidecar polling
-## Why This Exists
-
-Deploying ML models in production involves stitching together disparate systems — model conversion, serving infrastructure, traffic management, adapter lifecycle. Each piece is well-solved individually, but integrating them into a coherent platform requires careful design.
-
-InferForge unifies this into a single stack:
-
-```
-POST /build {"model_type": "bert"}
-  → HuggingFace download → ONNX export → TensorRT compile
-  → Ensemble config generation (DAG-validated)
-  → Triton deployment (auto-load)
-  → Ready for inference
-```
-
-The core idea: **model onboarding is a pipeline, not a manual process**. Define a preset, and the system handles everything from weights to serving.
+It started as a way to work through the whole path — model conversion, serving,
+traffic control, adapter lifecycle — as one system instead of separate pieces.
 
 ## Architecture
 
@@ -41,154 +25,150 @@ graph TB
         Builder[Builder<br/>HF → ONNX → TRT] -->|build & load| Triton
         Builder --> Redis[(Redis<br/>Registry · Jobs · Cache)]
 
-        LoRASync[LoRA Sync Sidecar] -->|poll registry| Redis
+        LoRASync[LoRA Sync Sidecar] -->|subscribe events| Redis
         LoRASync -->|download weights| MinIO[(MinIO / S3)]
         LoRASync -->|load adapter| vLLM
     end
 ```
 
-## Core Components
+## Components
 
-| Component | Role | Key Detail |
-|---|---|---|
-| Gateway | API entry point, traffic management | FastAPI with auth, adaptive concurrency, circuit breaker |
-| Triton | Embedding/vision inference | Ensemble pipelines: preprocessor → TensorRT engine → postprocessor |
-| vLLM | LLM text generation | SSE streaming, primary/fallback with graceful degradation |
-| Builder | Model build automation | HF → ONNX → TRT → config.pbtxt → Triton deploy |
-| LoRA Sync | Adapter lifecycle across pods | Pull-based: poll Redis → download from MinIO → load into vLLM |
+| Component | Role |
+|---|---|
+| Gateway | FastAPI entry point: auth, throttling, circuit breaker, adaptive concurrency |
+| Triton | Embedding/vision inference via TensorRT ensembles |
+| vLLM | Text generation, SSE streaming, primary/fallback |
+| Builder | HF → ONNX → TensorRT → config.pbtxt → Triton deploy |
+| LoRA Sync | Per-pod sidecar: subscribes to Redis, pulls adapters from MinIO, loads into vLLM |
 
-## Build Pipeline
+## Build pipeline
 
-The Builder automates the full path from HuggingFace to production serving:
+One request takes a model from HuggingFace to a served Triton ensemble:
 
 ```
-POST /build {"model_type": "bert"}
+POST /models/register {"model_type": "bert"}
 
-PENDING → BUILDING_ONNX → BUILDING_TRT → GENERATING_CONFIG → DEPLOYING → READY
+PENDING → BUILDING_ONNX → BUILDING_TRT → GENERATING_CONFIG → DEPLOYING → VALIDATING_PRECISION → READY
+```
 
 1. Download from HuggingFace
-2. Export to ONNX (dynamic axes, shape inference)
-3. Compile to TensorRT (trtexec, fp16/int8, dynamic shapes)
-4. Generate config.pbtxt (engine + processor + ensemble)
-5. DAG validation (verify tensor connectivity across steps)
-6. Deploy to Triton (load each submodel + ensemble)
-```
+2. Export to ONNX (dynamic axes)
+3. Compile to TensorRT (trtexec, fp16)
+4. Generate config.pbtxt (engine + processors + ensemble)
+5. DAG validation (tensor connectivity + output ports)
+6. Deploy to Triton
+7. Precision check: fp16 engine vs fp32 ONNX reference, gated on cosine / max-abs-err
 
-**Ensemble example — BERT:**
-```
-TEXTS → bert_preprocessor (tokenizer, python_backend)
-      → bert_engine (TensorRT, fp16)
-      → bert_emb (pooled_output)
-```
-
-Build status is tracked via Redis with TTL expiration. Query with `GET /build/{job_id}`.
-
-## Traffic Resilience
-
-### Sliding Window Rate Limiting
-
-Redis sorted set per client IP × endpoint. Unlike fixed-window counters, prevents burst at window boundaries.
-
-| Endpoint | Limit | Window |
-|---|---|---|
-| `/infer` | 120 req | 60s |
-| `/generate` | 60 req | 60s |
-
-Response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After`
-
-### Adaptive Concurrency Control
-
-Static semaphores can't adapt to GPU load. The adaptive limiter measures response latency and adjusts:
+BERT ensemble:
 
 ```
-latency < target × 0.7 → increase limit (+2)
-latency > target        → decrease limit (×0.75)
+TEXTS → bert_preprocessor (tokenizer)
+      → bert_encoder (TensorRT fp16 → last_hidden_state)
+      → bert_postprocessor (masked mean pooling)
+      → bert_emb
 ```
 
-Separate limiters for primary and fallback models. When primary is saturated, excess requests route to fallback automatically.
+Build status is tracked in Redis with a TTL; query `GET /models/jobs/{job_id}`.
 
-### Graceful Degradation
+## Traffic resilience
 
-```
-Request → Primary (7B) available?
-            ├─ YES → process
-            │         └─ failure → fallback
-            └─ NO  → Fallback (1.5B) available?
-                       ├─ YES → degraded response
-                       └─ NO  → 503 "all models at capacity"
-```
+### Rate limiting
 
-Circuit breaker detects sustained failures and short-circuits directly to fallback.
+Sliding window per client IP × endpoint (Redis sorted set), so a burst can't
+straddle a window boundary. `/infer` 120/60s, `/generate` 60/60s. Responses carry
+`X-RateLimit-*` and `Retry-After`.
 
-## Multi-LoRA Adapter Management
+### Adaptive concurrency
 
-Pull-based sync pattern — same architecture used in large-scale production (100+ pods):
+A static semaphore can't track GPU load, so the limit moves with measured latency:
 
 ```
-1. Register:  POST /lora/register → Redis metadata store
-2. Upload:    Adapter weights → MinIO (S3-compatible)
-3. Sync:      Each pod's sidecar polls Redis every 30s
-                → detects new/updated adapter
-                → downloads from MinIO
-                → calls vLLM load_lora_adapter
-4. Remove:    DELETE /lora/{name} → Redis
-                → next poll cycle → pods unload adapter
+latency < target × 0.7 → limit += 2
+latency > target        → limit ×= 0.75
 ```
 
-| API | Action |
+Primary and fallback have separate limiters; when primary saturates, requests spill
+to fallback.
+
+### Graceful degradation
+
+```
+primary (7B) available? → yes: process (fallback on failure)
+                          no:  fallback (1.5B) available? → yes: degraded / no: 503
+```
+
+The circuit breaker trips on sustained failure and routes to fallback.
+
+## Multi-LoRA
+
+Each vLLM pod syncs its own adapters, pull-based:
+
+```
+register  POST /lora/register → Redis + publish event
+upload    adapter weights → MinIO
+sync      pod sidecar subscribes to the event → downloads from MinIO → vLLM load_lora_adapter
+          (a periodic reconcile covers missed events)
+remove    DELETE /lora/{name} → Redis + publish → pods unload
+```
+
+| API | |
 |---|---|
-| `POST /lora/register` | Register adapter (auto-increments version) |
-| `DELETE /lora/{name}` | Remove adapter (pods unload on next poll) |
-| `GET /lora` | List all registered adapters |
-| `GET /lora/{name}` | Get adapter details |
+| `POST /lora/register` | register (version auto-increments) |
+| `DELETE /lora/{name}` | remove |
+| `GET /lora`, `GET /lora/{name}` | list, detail |
 
-Use in inference: `POST /generate {"lora_adapter": "ko-chat", ...}`
+Use with `POST /generate {"lora_adapter": "ko-chat", ...}`.
 
-## Project Structure
+## Embedding model tiering
+
+Keeping every built model hot on the GPU wastes memory, so `/infer` records usage
+in Redis and a background reaper demotes idle models:
+
+| Tier | State | Trigger |
+|---|---|---|
+| hot | on GPU | request rate ≥ threshold |
+| warm | loaded | moderate / recent use |
+| cold | unloaded from Triton | idle |
+| archive | unloaded, engine kept in the S3 repo | long idle |
+
+`decide_tier` is a pure function of rate and idle time; the load/unload/archive
+effects are injected, so the policy is tested without Triton or object storage.
+Gated behind `ENABLE_TIERING`. Archive currently just unloads (the engine stays in
+the S3 repo); the cold-bucket move and `warm` scale-down are TODO.
+
+## Layout
 
 ```
-inferforge/
-├── gateway/                 # API Gateway (FastAPI)
-│   ├── routers/             # inference, generate, models, lora, health
-│   ├── services/            # inference_service, generation_service, lora_registry
-│   ├── middlewares/         # throttle, circuit_breaker, adaptive_concurrency
-│   ├── clients/             # triton, vllm, redis, builder HTTP clients
-│   └── schemas/             # request/response models
-├── builder/                 # Build Pipeline Service
-│   ├── services/            # build_pipeline, config_generator, dag_validator, onnx_exporter
-│   ├── processors/          # Triton python_backend processors (bert/, clip/)
-│   └── presets/             # Model preset definitions (YAML)
-├── lora_sync/               # LoRA sync sidecar
-├── docker/                  # Dockerfiles + docker-compose
-├── model_repository/        # Triton model repository
-├── example/                 # Usage examples
-└── tests/
-    ├── unit/                # Unit tests (80+)
-    └── integration/         # Integration tests (Docker-based)
+gateway/       # FastAPI gateway: routers, services, middlewares, clients, schemas
+builder/       # build pipeline: services, processors (bert/, clip/), presets
+lora_sync/     # LoRA sync sidecar
+common/        # JSON logger shared by the Triton model_repository backends (no gateway dependency)
+model_repository/  # Triton model repository
+docker/        # Dockerfiles + compose
+example/       # usage examples
+tests/         # unit + integration
 ```
 
-## Getting Started
+## Running
 
 ```bash
-# Clone and setup
 git clone https://github.com/thjung123/inferforge.git
 cd inferforge
 uv sync
 
-# Start all services
-docker-compose -f docker/docker-compose.yml up --build
+docker compose -f docker/docker-compose.yml up --build
 
-# Register and build a model
+# build a model
 curl -X POST http://localhost:8080/models/register \
   -H "x-api-key: test-key" -H "Content-Type: application/json" \
   -d '{"model_type": "bert"}'
 
-# Embedding inference
+# embedding
 curl -X POST http://localhost:8080/infer \
   -H "x-api-key: test-key" -H "Content-Type: application/json" \
   -d '{"model_name": "bert_ensemble", "inputs": {"texts": ["Hello world"]}}'
 
-# LLM generation
+# generation
 curl -X POST http://localhost:8080/generate \
   -H "x-api-key: test-key" -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "Explain TensorRT."}], "max_tokens": 128}'
@@ -197,25 +177,56 @@ curl -X POST http://localhost:8080/generate \
 ## Testing
 
 ```bash
-uv run pytest -v tests/unit          # Unit tests
-uv run pytest -v tests/integration   # Integration tests (requires Docker)
+uv run pytest tests/unit
+uv run pytest tests/integration   # needs Docker
 ```
 
-## Tech Stack
+## Stack
 
-| Layer | Technology |
-|---|---|
-| API Gateway | FastAPI, Gunicorn |
-| Embedding Inference | NVIDIA Triton, TensorRT |
-| LLM Inference | vLLM |
-| Model Building | ONNX, TensorRT (trtexec) |
-| Adapter Storage | MinIO (S3-compatible) |
-| State/Cache | Redis |
-| Containerization | Docker, Docker Compose |
-| Testing | pytest, httpx, Testcontainers |
+FastAPI / Gunicorn, NVIDIA Triton + TensorRT, vLLM, ONNX, Redis, MinIO, Docker.
 
-## Production Notes
+## Operations
 
-- **LoRA adapter registry** uses Redis + MinIO here. In production, replace with a persistent model registry (e.g. MLflow, Vertex AI) and S3/GCS for adapter storage.
-- **Adapter sync** uses a pull-based pattern — each vLLM pod polls the registry and downloads from object storage. Same pattern used at scale in production systems.
-- **Adaptive concurrency** dynamically adjusts GPU concurrency limits based on response latency, preventing saturation under variable load.
+**Health** — `/health` is liveness; `/health/ready` returns 503 when Redis is
+unreachable so an orchestrator stops routing to a pod that can't serve. The
+fault-injection hooks (`/health/fail`, `/unstable`, `/reset`) are gated behind
+`ENABLE_FAULT_INJECTION` and 404 in prod.
+
+**Deploy/rollback** — services are stateless behind the gateway; roll back by
+redeploying the previous image. Served models live in the Triton repository (and
+MinIO for archived engines), so a gateway rollback doesn't touch them.
+
+**GPU sizing** — vLLM primary (7B fp16) ≈ 14 GB + KV cache, fallback (1.5B) ≈ 3 GB,
+which fit a single 24 GB card. Triton embedding engines are small (bert-base fp16
+≈ 220 MB); idle ones are demoted off the GPU by the tiering reaper.
+
+**Alerting** — gateway 5xx rate, `/infer` and `/generate` p99 latency, circuit
+breaker open state, adaptive-concurrency limit collapse, and build-job failures
+(including precision-validation rejections). Metrics are Prometheus
+(`http_requests_total`, `http_request_duration_seconds`), exposed at `/metrics` and
+labeled by route template.
+
+**Failure recovery** — vLLM primary failure degrades to the fallback; Triton
+failures trip the circuit breaker (503 + `Retry-After`); a Redis outage fails the
+throttle open, so requests still serve while rate limiting is paused.
+
+## Notes and limitations
+
+- Both BERT (text → embedding) and CLIP (image + text → similarity) build from a
+  preset the same way — `register` compiles the towers, generates the ensemble
+  config, and deploys it. BERT is the path with a full fp16 precision run behind it;
+  CLIP shares the pipeline but has had less end-to-end validation.
+- `/infer` dispatch routes to per-preset managers (BERT, CLIP); a new model type
+  needs a manager, not just a build.
+- Auth accepts an `x-api-key` or a JWT; JWT verification runs only when `JWT_SECRET`
+  is set (an empty secret disables JWT while leaving API-key auth active), and JWTs
+  must carry an `exp`.
+- The adaptive limiters, circuit breakers, and `/infer` semaphore are in-process
+  and assume a single Gunicorn worker; a multi-worker/multi-pod setup would move
+  this state to Redis (rate limiting already lives there).
+- The LoRA registry uses Redis + MinIO. In production you'd back it with a
+  persistent registry (MLflow, Vertex AI) and S3/GCS.
+- SSE streaming (`/generate` with `stream: true`) skips the adaptive limiter and
+  the per-request failure fallback (no primary → fallback retry on error), though an
+  open vLLM circuit breaker still routes it to the fallback. The non-streaming path
+  has the full 7B → 1.5B degradation, including the on-failure retry.

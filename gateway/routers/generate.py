@@ -1,4 +1,3 @@
-import logging
 import time
 
 import httpx
@@ -6,6 +5,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from gateway.clients.vllm_client import VLLMClient, get_vllm_fallback, get_vllm_primary
+from gateway.config import get_settings
 from gateway.middlewares.adaptive_concurrency import (
     get_fallback_limiter,
     get_primary_limiter,
@@ -13,9 +13,9 @@ from gateway.middlewares.adaptive_concurrency import (
 from gateway.middlewares.circuit_breaker.manager import breaker_manager
 from gateway.schemas.generation import GenerateRequest, GenerateResponse
 from gateway.services.generation_service import GenerationService
+from gateway.utils.logger import gateway_logger as logger
 
 router = APIRouter()
-logger = logging.getLogger("gateway")
 
 
 def _get_primary_service(
@@ -47,9 +47,15 @@ async def generate(
     primary: GenerationService = Depends(_get_primary_service),
     fallback: GenerationService = Depends(_get_fallback_service),
 ):
-    model = req.model
+    settings = get_settings()
     if req.lora_adapter:
-        model = req.lora_adapter
+        primary_model = req.lora_adapter
+        fallback_model = settings.vllm_fallback_model
+    elif req.model and req.model != "default":
+        primary_model = fallback_model = req.model
+    else:
+        primary_model = settings.vllm_primary_model
+        fallback_model = settings.vllm_fallback_model
 
     vllm_breaker = breaker_manager.get("vllm")
     use_fallback = not vllm_breaker.allow_request()
@@ -57,12 +63,12 @@ async def generate(
     if use_fallback:
         logger.warning("[Fallback] vLLM circuit open, routing to fallback")
 
-    # --- Streaming ---
     if req.stream:
         service = fallback if use_fallback else primary
+        stream_model = fallback_model if use_fallback else primary_model
         return StreamingResponse(
             service.generate_stream(
-                model=model,
+                model=stream_model,
                 messages=req.messages,
                 max_tokens=req.max_tokens,
                 temperature=req.temperature,
@@ -70,7 +76,6 @@ async def generate(
             media_type="text/event-stream",
         )
 
-    # --- Non-streaming: primary → fallback → 503 ---
     p_limiter = get_primary_limiter()
     f_limiter = get_fallback_limiter()
 
@@ -79,9 +84,9 @@ async def generate(
         if acquired:
             start = time.time()
             try:
-                result = await _try_generate(primary, model, req)
+                result = await _try_generate(primary, primary_model, req)
                 vllm_breaker.record_success()
-                return _build_response(result, model)
+                return _build_response(result, primary_model)
             except (
                 httpx.HTTPStatusError,
                 httpx.TimeoutException,
@@ -98,7 +103,6 @@ async def generate(
             f"avg_latency={p_limiter.avg_latency:.3f}s), trying fallback"
         )
 
-    # Fallback
     if not f_limiter.is_available():
         logger.warning(
             f"[Throttle] All at capacity "
@@ -113,11 +117,19 @@ async def generate(
     await f_limiter.acquire()
     start = time.time()
     try:
-        result = await _try_generate(fallback, model, req)
+        result = await _try_generate(fallback, fallback_model, req)
+    except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
+        vllm_breaker.record_failure()
+        logger.error(f"[Fallback] Fallback model failed ({exc})")
+        return JSONResponse(
+            status_code=503,
+            content={"error": "All models failed to generate"},
+            headers={"Retry-After": "1"},
+        )
     finally:
         f_limiter.release(time.time() - start)
 
-    return _build_response(result, model)
+    return _build_response(result, fallback_model)
 
 
 def _build_response(result: dict, model: str) -> GenerateResponse:

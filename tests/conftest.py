@@ -20,8 +20,10 @@ class FakeRedis:
         self._kv_store: dict[str, str] = {}
 
     async def incr(self, key):
-        self.counter += 1
-        return self.counter
+        # Keyed + backed by _kv_store so a subsequent get(key) sees the value,
+        # matching real Redis INCR/GET semantics (used by usage tiering).
+        self._kv_store[key] = str(int(self._kv_store.get(key, 0)) + 1)
+        return int(self._kv_store[key])
 
     async def expire(self, key, ttl):
         self.expire_calls[key] = ttl
@@ -40,6 +42,12 @@ class FakeRedis:
 
     async def hgetall(self, key):
         return dict(self._hash_store.get(key, {}))
+
+    async def hincrby(self, key, field, amount):
+        self._hash_store.setdefault(key, {})
+        cur = int(self._hash_store[key].get(field, 0)) + amount
+        self._hash_store[key][field] = str(cur)
+        return cur
 
     async def sadd(self, key, *values):
         if key not in self._set_store:
@@ -65,6 +73,12 @@ class FakeRedis:
 
     async def set(self, key, value, ex=None):
         self._kv_store[key] = value
+        return True
+
+    async def publish(self, channel, message):
+        return 0
+
+    async def ping(self):
         return True
 
     async def close(self):

@@ -1,14 +1,19 @@
-name: "clip_image_encoder"
+name: "clip_visual"
 platform: "tensorrt_plan"
-max_batch_size: 256
+max_batch_size: 32
 
 input [
-  { name: "image" data_type: TYPE_FP32 dims: [3, 224, 224] }
+  { name: "pixel_values" data_type: TYPE_FP32 dims: [3, 224, 224] }
 ]
 
 output [
-  { name: "image_embedding" data_type: TYPE_FP32 dims: [512] }
+  { name: "image_embeds" data_type: TYPE_FP32 dims: [512] }
 ]
+
+dynamic_batching {
+  preferred_batch_size: [4, 8, 16]
+  max_queue_delay_microseconds: 1000
+}
 
 instance_group [
   { kind: KIND_GPU count: 1 }

@@ -26,7 +26,13 @@ def test_vllm_breaker_recovers_after_timeout():
     breaker = breaker_manager.get("vllm")
     breaker.fail_count = 3
     breaker.open = True
+    breaker.half_open = False
     breaker.last_failure = time.time() - 20  # 15s recovery passed
 
+    # one probe allowed (half-open), then fully closed on success
     assert breaker.allow_request() is True
+    assert breaker.half_open is True
+    assert breaker.allow_request() is False
+    breaker.record_success()
     assert breaker.open is False
+    assert breaker.half_open is False

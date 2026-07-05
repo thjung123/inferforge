@@ -5,7 +5,7 @@ def test_default_settings_values():
     settings = Settings()
     assert settings.triton_url == "triton:8001"
     assert settings.redis_url == "redis://localhost:6379"
-    assert settings.jwt_secret == "default_secret"
+    assert settings.jwt_secret == ""
     assert isinstance(settings.api_key_whitelist, list)
     assert settings.rate_limit_infer == 120
     assert settings.rate_limit_generate == 60

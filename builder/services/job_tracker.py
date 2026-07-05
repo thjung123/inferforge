@@ -5,7 +5,7 @@ from redis.asyncio import Redis
 from builder.schemas import JobState
 
 _JOB_PREFIX = "build_job:"
-_TERMINAL_TTL_SEC = 3600  # 1 hour TTL for completed/failed jobs
+_TERMINAL_TTL_SEC = 3600
 
 
 class JobTracker:

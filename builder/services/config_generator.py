@@ -20,7 +20,7 @@ def generate_config_pbtxt(cfg: dict[str, Any], output_dir: Path) -> Path:
 
     lines = [
         f'name: "{model_name}"',
-        'backend: "tensorrt_plan"',
+        'platform: "tensorrt_plan"',
         f"max_batch_size: {max_batch_size}",
         "",
     ]
@@ -49,6 +49,17 @@ def generate_config_pbtxt(cfg: dict[str, Any], output_dir: Path) -> Path:
         lines.append("]")
         lines.append("")
 
+    if max_batch_size > 0:
+        lines.extend(
+            [
+                "dynamic_batching {",
+                "  preferred_batch_size: [4, 8, 16]",
+                "  max_queue_delay_microseconds: 1000",
+                "}",
+                "",
+            ]
+        )
+
     instance_count = cfg.get("triton", {}).get("instance_count", 1)
     lines.append("instance_group [")
     lines.append(f"  {{ kind: KIND_GPU count: {instance_count} }}")
@@ -67,7 +78,7 @@ def generate_config_pbtxt(cfg: dict[str, Any], output_dir: Path) -> Path:
 
     output_dir.mkdir(parents=True, exist_ok=True)
     pbtxt_path = output_dir / "config.pbtxt"
-    pbtxt_path.write_text("\n".join(lines))
+    pbtxt_path.write_text("\n".join(lines) + "\n")
 
     logger.info(f"Generated config → {pbtxt_path}")
     return pbtxt_path
@@ -126,7 +137,7 @@ def generate_processor_config(
     model_dir = output_dir / model_name
     model_dir.mkdir(parents=True, exist_ok=True)
     pbtxt_path = model_dir / "config.pbtxt"
-    pbtxt_path.write_text("\n".join(lines))
+    pbtxt_path.write_text("\n".join(lines) + "\n")
 
     logger.info(f"Generated processor config → {pbtxt_path}")
     return pbtxt_path
@@ -172,7 +183,7 @@ def generate_ensemble_config(ensemble_cfg: dict[str, Any], output_dir: Path) -> 
     model_dir.mkdir(parents=True, exist_ok=True)
     (model_dir / "1").mkdir(exist_ok=True)
     pbtxt_path = model_dir / "config.pbtxt"
-    pbtxt_path.write_text("\n".join(lines))
+    pbtxt_path.write_text("\n".join(lines) + "\n")
 
     logger.info(f"Generated ensemble config → {pbtxt_path}")
     return pbtxt_path

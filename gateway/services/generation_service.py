@@ -1,11 +1,9 @@
-import logging
 import time
 from collections.abc import AsyncIterator
 from typing import Any
 
 from gateway.clients.vllm_client import VLLMClient
-
-logger = logging.getLogger("gateway")
+from gateway.utils.logger import gateway_logger as logger
 
 
 class GenerationService:

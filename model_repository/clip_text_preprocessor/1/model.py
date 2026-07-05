@@ -2,7 +2,7 @@ import json
 
 import triton_python_backend_utils as pb_utils
 from builder.processors.clip.text_preprocessor import ClipTextPreprocessor
-from gateway.utils.logger import triton_logger as logger
+from common.logger import triton_logger as logger
 
 
 class TritonPythonModel:

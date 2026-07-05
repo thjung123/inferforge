@@ -1,12 +1,11 @@
-import logging
 from collections.abc import AsyncIterator
+from functools import lru_cache
 from typing import Any
 
 import httpx
 
 from gateway.config import get_settings
-
-logger = logging.getLogger("gateway")
+from gateway.utils.logger import gateway_logger as logger
 
 _TIMEOUT = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0)
 
@@ -71,21 +70,13 @@ class VLLMClient:
         logger.info(f"[vLLM] Connection closed: {self._base_url}")
 
 
-_primary: VLLMClient | None = None
-_fallback: VLLMClient | None = None
-
-
+@lru_cache
 def get_vllm_primary() -> VLLMClient:
-    global _primary
-    if _primary is None:
-        settings = get_settings()
-        _primary = VLLMClient(settings.vllm_primary_url)
-    return _primary
+    settings = get_settings()
+    return VLLMClient(settings.vllm_primary_url)
 
 
+@lru_cache
 def get_vllm_fallback() -> VLLMClient:
-    global _fallback
-    if _fallback is None:
-        settings = get_settings()
-        _fallback = VLLMClient(settings.vllm_fallback_url)
-    return _fallback
+    settings = get_settings()
+    return VLLMClient(settings.vllm_fallback_url)

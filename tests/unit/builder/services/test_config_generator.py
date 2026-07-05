@@ -25,8 +25,9 @@ def test_generate_config_pbtxt(tmp_path: Path):
     assert result.exists()
     content = result.read_text()
     assert 'name: "test_engine"' in content
-    assert 'backend: "tensorrt_plan"' in content
+    assert 'platform: "tensorrt_plan"' in content
     assert "max_batch_size: 64" in content
+    assert "dynamic_batching" in content
     assert "TYPE_INT64" in content
     assert "TYPE_FP32" in content
     assert "count: 2" in content

@@ -75,10 +75,16 @@ def _load_model(cfg: dict[str, Any]) -> torch.nn.Module:
 def _build_dummy_inputs(cfg: dict[str, Any]) -> tuple[torch.Tensor, ...]:
     inputs = []
     for inp in cfg["inputs"]:
+        name = inp["name"].lower()
         shape = [abs(d) if d != -1 else 8 for d in inp["shape"]]
         torch_dtype = _DATATYPE_TO_TORCH[inp["datatype"]]
         if torch_dtype in (torch.int32, torch.int64):
-            inputs.append(torch.randint(0, 1000, shape, dtype=torch_dtype))
+            if "mask" in name:
+                inputs.append(torch.ones(shape, dtype=torch.int64))
+            elif "type" in name:
+                inputs.append(torch.zeros(shape, dtype=torch.int64))
+            else:
+                inputs.append(torch.randint(0, 1000, shape, dtype=torch.int64))
         else:
             inputs.append(torch.randn(shape, dtype=torch_dtype))
     return tuple(inputs)

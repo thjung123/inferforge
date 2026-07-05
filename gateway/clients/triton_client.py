@@ -80,7 +80,6 @@ class TritonClient:
             logger.warning(
                 f"[TritonClient] Attempt {attempt}/{self.max_retries} failed: {exc}"
             )
-            self.triton_breaker.record_failure()
 
         try:
             result = await async_retry(
@@ -89,14 +88,13 @@ class TritonClient:
                 base_delay=self.base_delay,
                 on_retry=_on_retry,
             )
-            self.triton_breaker.record_success()
             logger.info(f"[TritonClient] Success | model={model_name}")
             return result
         except Exception as e:
             logger.error(
                 f"[TritonClient] All retries failed for model={model_name}: {e}"
             )
-            raise TritonInferenceError(detail=f"Inference failed for {model_name}: {e}")
+            raise TritonInferenceError(detail=f"Inference failed for {model_name}")
 
 
 @lru_cache

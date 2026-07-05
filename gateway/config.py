@@ -8,9 +8,14 @@ class Settings(BaseSettings):
     builder_url: str = "http://localhost:8090"
     vllm_primary_url: str = "http://vllm-primary:8100"
     vllm_fallback_url: str = "http://vllm-fallback:8101"
+    vllm_primary_model: str = "Qwen/Qwen2.5-7B-Instruct"
+    vllm_fallback_model: str = "Qwen/Qwen2.5-1.5B-Instruct"
     redis_url: str = "redis://localhost:6379"
-    jwt_secret: str = "default_secret"
+    jwt_secret: str = ""
     api_key_whitelist: list[str] = []
+    enable_fault_injection: bool = False
+    enable_tiering: bool = False
+    tiering_reaper_interval: float = 300.0
 
     rate_limit_infer: int = 120
     rate_limit_generate: int = 60
@@ -28,6 +33,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     return Settings()
