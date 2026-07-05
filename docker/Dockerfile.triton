@@ -7,8 +7,8 @@ COPY pyproject.toml ./
 
 RUN uv pip install --system --break-system-packages .
 
-COPY gateway ./gateway
 COPY builder ./builder
+COPY common ./common
 
 
 ENV TRITON_MODEL_REPOSITORY=/models
@@ -23,6 +23,8 @@ EXPOSE 8000 8001 8002
 
 CMD sh -c "tritonserver \
     --model-repository=${TRITON_MODEL_REPOSITORY} \
+    --model-control-mode=explicit \
+    --load-model=* \
     --strict-model-config=${TRITON_STRICT_MODEL_CONFIG} \
     --allow-http=${TRITON_ALLOW_HTTP} \
     --allow-grpc=${TRITON_ALLOW_GRPC} \

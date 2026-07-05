@@ -15,12 +15,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     torch torchvision torchaudio \
     transformers pycuda pyyaml numpy \
     onnx onnxscript yq onnxruntime onnx-graphsurgeon openai-clip \
-    fastapi uvicorn redis pydantic-settings httpx \
+    fastapi uvicorn redis pydantic-settings httpx minio \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
 COPY builder ./builder
+COPY common ./common
 
 ENV MODEL_REPOSITORY=/models
 ENV REDIS_URL=redis://redis:6379/0
