@@ -1,10 +1,10 @@
 import numpy as np
 from pydantic import BaseModel
-from typing import List, ClassVar
+from typing import ClassVar
 
 
 class BertRequest(BaseModel):
-    TEXTS: List[str]
+    TEXTS: list[str]
     OUTPUT_NAMES: ClassVar[list[str]] = ["bert_emb"]
 
     def to_triton_inputs(self) -> list[dict]:

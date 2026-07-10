@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && ln -sf $(which pip3) /usr/bin/pip \
  && pip install --upgrade --ignore-installed pip setuptools wheel \
  && pip install \
-    torch torchvision torchaudio \
-    transformers pycuda pyyaml numpy \
+    torch==2.8.0 torchvision torchaudio \
+    transformers==4.57.1 pycuda pyyaml numpy \
     onnx onnxscript yq onnxruntime onnx-graphsurgeon openai-clip \
     fastapi uvicorn redis pydantic-settings httpx minio \
  && rm -rf /var/lib/apt/lists/*

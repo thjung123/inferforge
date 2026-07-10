@@ -1,4 +1,5 @@
-from typing import Any, Awaitable, cast
+from typing import Annotated, Any, cast
+from collections.abc import Awaitable
 
 from fastapi import APIRouter, Depends
 from starlette.status import HTTP_202_ACCEPTED
@@ -26,7 +27,7 @@ router = APIRouter()
 )
 async def register_model(
     body: RegisterRequest,
-    svc: ModelManagementService = Depends(get_model_management_service),
+    svc: Annotated[ModelManagementService, Depends(get_model_management_service)],
 ):
     try:
         result = await svc.register(body.model_type, body.instance_count)
@@ -41,7 +42,7 @@ async def register_model(
 
 @router.get("", response_model=ModelListResponse)
 async def list_models(
-    svc: ModelManagementService = Depends(get_model_management_service),
+    svc: Annotated[ModelManagementService, Depends(get_model_management_service)],
 ):
     index = await svc.list_models()
     models = [
@@ -75,7 +76,7 @@ async def get_job_status(job_id: str):
 @router.post("/{name}/load", response_model=ModelActionResponse)
 async def load_model(
     name: str,
-    svc: ModelManagementService = Depends(get_model_management_service),
+    svc: Annotated[ModelManagementService, Depends(get_model_management_service)],
 ):
     try:
         await svc.load_model(name)
@@ -87,7 +88,7 @@ async def load_model(
 @router.post("/{name}/unload", response_model=ModelActionResponse)
 async def unload_model(
     name: str,
-    svc: ModelManagementService = Depends(get_model_management_service),
+    svc: Annotated[ModelManagementService, Depends(get_model_management_service)],
 ):
     try:
         await svc.unload_model(name)

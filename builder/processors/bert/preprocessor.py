@@ -1,5 +1,4 @@
 import logging
-from typing import Dict, List
 
 import numpy as np
 from transformers import BertTokenizerFast
@@ -13,7 +12,7 @@ class BertPreprocessor:
         self.tokenizer = BertTokenizerFast.from_pretrained(model_name)
         self.max_length = max_length
 
-    def run(self, texts: List[str]) -> Dict[str, np.ndarray]:
+    def run(self, texts: list[str]) -> dict[str, np.ndarray]:
         logger.info(f"[Preprocessor] Processing {len(texts)} BERT text inputs")
 
         enc = self.tokenizer(

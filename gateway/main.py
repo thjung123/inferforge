@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
@@ -7,6 +8,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from gateway.config import get_settings
 from gateway.middlewares.circuit_breaker.middleware import circuit_breaker_middleware
 from gateway.routers import generate, health, inference, lora, models, version
+from gateway.routers.version import APP_VERSION
 from gateway.middlewares.request_id import add_request_id
 from gateway.middlewares.auth import auth_middleware
 from gateway.middlewares.throttle import throttle_middleware
@@ -36,6 +38,8 @@ async def lifespan(app: FastAPI):
     logger.info("[Shutdown] Closing connections...")
     if reaper_task:
         reaper_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await reaper_task
     await get_builder_client().close()
     await get_triton_http_client().close()
     await get_vllm_primary().close()
@@ -45,7 +49,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Triton Inference API Gateway",
-    version="1.0.0",
+    version=APP_VERSION,
     lifespan=lifespan,
 )
 
@@ -74,6 +78,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "gateway.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=8080,
         reload=True,
     )

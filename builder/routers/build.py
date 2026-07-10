@@ -1,3 +1,4 @@
+from typing import Annotated
 import asyncio
 import uuid
 
@@ -17,7 +18,7 @@ _build_tasks: set = set()
 @router.post("/build", status_code=HTTP_202_ACCEPTED, response_model=BuildResponse)
 async def build_model(
     body: BuildRequest,
-    tracker: JobTracker = Depends(get_job_tracker),
+    tracker: Annotated[JobTracker, Depends(get_job_tracker)],
 ):
     preset = load_preset(body.model_type)
     if body.instance_count is not None:
@@ -42,7 +43,7 @@ async def build_model(
 @router.get("/build/{job_id}", response_model=JobStatus)
 async def get_job_status(
     job_id: str,
-    tracker: JobTracker = Depends(get_job_tracker),
+    tracker: Annotated[JobTracker, Depends(get_job_tracker)],
 ):
     data = await tracker.get(job_id)
     if data is None:
@@ -57,7 +58,7 @@ async def get_job_status(
 
 @router.get("/build", response_model=list[JobStatus])
 async def list_jobs(
-    tracker: JobTracker = Depends(get_job_tracker),
+    tracker: Annotated[JobTracker, Depends(get_job_tracker)],
 ):
     jobs = await tracker.list_all()
     return [

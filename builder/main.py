@@ -22,8 +22,8 @@ async def lifespan(app: FastAPI):
     JobTracker.initialize(redis)
     yield
     logger.info("[Shutdown] Closing Redis ...")
-    await redis.close()
+    await redis.aclose()
 
 
-app = FastAPI(title="Model Builder Sidecar", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Model Builder Sidecar", version="0.1.0", lifespan=lifespan)
 app.include_router(build_router)

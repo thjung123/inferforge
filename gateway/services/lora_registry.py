@@ -1,7 +1,8 @@
 import json
 import time
 from functools import lru_cache
-from typing import Awaitable, cast
+from typing import cast
+from collections.abc import Awaitable
 
 from redis.asyncio import Redis
 

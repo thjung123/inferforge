@@ -1,5 +1,2 @@
-from typing import List
-
-
-def preprocess_inputs(inputs: List[dict]) -> List[dict]:
+def preprocess_inputs(inputs: list[dict]) -> list[dict]:
     return inputs

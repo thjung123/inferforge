@@ -13,7 +13,7 @@ class CircuitBreaker:
 
     def record_failure(self):
         self.fail_count += 1
-        self.last_failure = time.time()
+        self.last_failure = time.monotonic()
         if self.half_open or self.fail_count >= self.failure_threshold:
             self.open = True
             self.half_open = False
@@ -27,7 +27,10 @@ class CircuitBreaker:
     def allow_request(self) -> bool:
         if not self.open:
             return True
-        if self.last_failure and time.time() - self.last_failure > self.recovery_time:
+        if (
+            self.last_failure
+            and time.monotonic() - self.last_failure > self.recovery_time
+        ):
             if not self.half_open:
                 self.half_open = True
                 return True

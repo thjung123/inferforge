@@ -1,7 +1,6 @@
 import asyncio
 import io
 import logging
-from typing import List, Union
 
 import aiohttp
 import numpy as np
@@ -19,7 +18,7 @@ class ClipImagePreprocessor:
 
     async def _fetch_image(
         self, session: aiohttp.ClientSession, url: str
-    ) -> Union[np.ndarray, None]:
+    ) -> np.ndarray | None:
         try:
             timeout = aiohttp.ClientTimeout(total=5)
             async with session.get(url, timeout=timeout) as resp:
@@ -46,7 +45,7 @@ class ClipImagePreprocessor:
             logger.error(f"[Preprocessor] Failed to process image bytes: {e}")
             return np.zeros((3, self.image_size, self.image_size), dtype=np.float32)
 
-    async def run(self, image_urls: List[str]) -> np.ndarray:
+    async def run(self, image_urls: list[str]) -> np.ndarray:
         logger.info(
             f"[Preprocessor] Starting async image preprocessing for {len(image_urls)} images"
         )

@@ -1,6 +1,7 @@
 import hashlib
 import json
-from typing import Any, Awaitable, cast
+from typing import Any, cast
+from collections.abc import Awaitable
 
 from redis.asyncio import Redis
 

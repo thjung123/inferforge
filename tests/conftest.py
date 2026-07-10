@@ -1,12 +1,6 @@
-import sys
-import pathlib
-
-import pytest
 import os
 
-ROOT_DIR = pathlib.Path(__file__).resolve().parents[1]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.append(str(ROOT_DIR))
+import pytest
 
 os.environ.setdefault("API_KEY_WHITELIST", '["test-key"]')
 
@@ -20,8 +14,6 @@ class FakeRedis:
         self._kv_store: dict[str, str] = {}
 
     async def incr(self, key):
-        # Keyed + backed by _kv_store so a subsequent get(key) sees the value,
-        # matching real Redis INCR/GET semantics (used by usage tiering).
         self._kv_store[key] = str(int(self._kv_store.get(key, 0)) + 1)
         return int(self._kv_store[key])
 

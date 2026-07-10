@@ -1,3 +1,4 @@
+from typing import Annotated
 import time
 
 import httpx
@@ -19,13 +20,13 @@ router = APIRouter()
 
 
 def _get_primary_service(
-    client: VLLMClient = Depends(get_vllm_primary),
+    client: Annotated[VLLMClient, Depends(get_vllm_primary)],
 ) -> GenerationService:
     return GenerationService(client)
 
 
 def _get_fallback_service(
-    client: VLLMClient = Depends(get_vllm_fallback),
+    client: Annotated[VLLMClient, Depends(get_vllm_fallback)],
 ) -> GenerationService:
     return GenerationService(client)
 
@@ -44,8 +45,8 @@ async def _try_generate(
 @router.post("", response_model=None)
 async def generate(
     req: GenerateRequest,
-    primary: GenerationService = Depends(_get_primary_service),
-    fallback: GenerationService = Depends(_get_fallback_service),
+    primary: Annotated[GenerationService, Depends(_get_primary_service)],
+    fallback: Annotated[GenerationService, Depends(_get_fallback_service)],
 ):
     settings = get_settings()
     if req.lora_adapter:
@@ -82,7 +83,7 @@ async def generate(
     if not use_fallback and p_limiter.is_available():
         acquired = await p_limiter.acquire()
         if acquired:
-            start = time.time()
+            start = time.monotonic()
             try:
                 result = await _try_generate(primary, primary_model, req)
                 vllm_breaker.record_success()
@@ -95,7 +96,7 @@ async def generate(
                 vllm_breaker.record_failure()
                 logger.warning(f"[Fallback] Primary failed ({exc}), trying fallback")
             finally:
-                p_limiter.release(time.time() - start)
+                p_limiter.release(time.monotonic() - start)
     elif not use_fallback:
         logger.info(
             f"[Adaptive] Primary at capacity "
@@ -115,7 +116,7 @@ async def generate(
         )
 
     await f_limiter.acquire()
-    start = time.time()
+    start = time.monotonic()
     try:
         result = await _try_generate(fallback, fallback_model, req)
     except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
@@ -127,7 +128,7 @@ async def generate(
             headers={"Retry-After": "1"},
         )
     finally:
-        f_limiter.release(time.time() - start)
+        f_limiter.release(time.monotonic() - start)
 
     return _build_response(result, fallback_model)
 

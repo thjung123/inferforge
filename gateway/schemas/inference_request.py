@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import Dict, Any
+from typing import Any
 
 
 class InferenceRequest(BaseModel):
     model_name: str = Field(..., description="Target models name deployed on Triton")
-    inputs: Dict[str, Any] = Field(..., description="Input data for inference")
+    inputs: dict[str, Any] = Field(..., description="Input data for inference")

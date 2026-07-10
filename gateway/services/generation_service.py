@@ -19,7 +19,7 @@ class GenerationService:
         temperature: float = 0.7,
     ) -> dict[str, Any]:
         logger.info(f"[Generate] model={model} max_tokens={max_tokens}")
-        start = time.time()
+        start = time.monotonic()
 
         result = await self._client.generate(
             model=model,
@@ -29,7 +29,7 @@ class GenerationService:
             stream=False,
         )
 
-        duration = time.time() - start
+        duration = time.monotonic() - start
         logger.info(f"[Generate] completed in {duration:.3f}s")
         return result
 

@@ -20,9 +20,7 @@ MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "lora-adapters")
 VLLM_URL = os.getenv("VLLM_URL", "http://localhost:8100")
 ADAPTER_DIR = Path(os.getenv("ADAPTER_DIR", "/adapters"))
-RECONCILE_INTERVAL = int(
-    os.getenv("RECONCILE_INTERVAL", os.getenv("POLL_INTERVAL", "300"))
-)
+RECONCILE_INTERVAL = int(os.getenv("RECONCILE_INTERVAL", "300"))
 
 _REGISTRY_PREFIX = "lora:adapter:"
 _REGISTRY_INDEX = "lora:adapters"
@@ -30,10 +28,10 @@ _REGISTRY_CHANNEL = "lora:events"
 
 
 async def _get_registered_adapters(redis: Redis) -> dict[str, dict[str, str]]:
-    names: set[str] = await redis.smembers(_REGISTRY_INDEX)  # type: ignore[misc]
+    names: set[str] = await redis.smembers(_REGISTRY_INDEX)  # type: ignore[misc, assignment]
     adapters = {}
     for name in names:
-        data: dict[str, str] = await redis.hgetall(f"{_REGISTRY_PREFIX}{name}")  # type: ignore[misc]
+        data: dict[str, str] = await redis.hgetall(f"{_REGISTRY_PREFIX}{name}")  # type: ignore[misc, assignment]
         if data and data.get("status") == "active":
             adapters[name] = data
     return adapters
@@ -188,7 +186,7 @@ async def run() -> None:
             _reconcile_loop(redis, minio_client),
         )
     finally:
-        await redis.close()
+        await redis.aclose()
 
 
 if __name__ == "__main__":

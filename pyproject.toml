@@ -1,7 +1,7 @@
 [project]
 name = "inferforge"
 version = "0.1.0"
-description = "Add your description here"
+description = "Self-hosted inference stack: FastAPI gateway, Triton/TensorRT embeddings, vLLM generation with multi-LoRA"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -11,21 +11,16 @@ dependencies = [
     "numpy>=1.26.4",
     "onnx>=1.19.1",
     "onnxruntime>=1.23.1",
-    "openai-clip>=1.0.1",
     "pillow>=11.3.0",
     "prometheus-client>=0.23.1",
     "pydantic-settings>=2.11.0",
     "pyjwt>=2.10.1",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
     "python-json-logger>=4.0.0",
+    "pyyaml>=6.0",
     "redis>=6.4.0",
-    "requests>=2.32.5",
-    "setuptools>=80.9.0",
     "torch>=2.8.0",
     "tritonclient[grpc]>=2.51.0",
     "transformers>=4.57.1",
-    "types-pyyaml>=6.0.12.20250915",
     "uvicorn>=0.37.0",
     "minio>=7.2.20",
 ]
@@ -33,18 +28,24 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black>=25.9.0",
     "mypy>=1.18.2",
     "pre-commit>=4.3.0",
     "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "requests>=2.32.5",
     "ruff>=0.13.3",
+    "types-pyyaml>=6.0.12.20250915",
     "types-requests>=2.32.4.20250913",
 ]
+perf = [
+    "pandas>=2.2.0",
+    "matplotlib>=3.9.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
 
 [tool.mypy]
 exclude = "(model_repository/.*/1/|models/scripts/|weights/)"
 ignore_missing_imports = true
 explicit_package_bases = true
-
-[tool.setuptools]
-packages = { find = {} }

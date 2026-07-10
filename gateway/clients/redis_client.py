@@ -34,7 +34,7 @@ class RedisClient:
     @classmethod
     async def close(cls):
         if cls._instance:
-            await cls._instance.close()
+            await cls._instance.aclose()
             logger.info("[RedisClient] Redis connection closed")
             cls._instance = None
 

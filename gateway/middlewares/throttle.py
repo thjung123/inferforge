@@ -1,6 +1,7 @@
 import asyncio
 import time
-from typing import Any, Awaitable, cast
+from typing import Any, cast
+from collections.abc import Awaitable
 
 from fastapi import Request
 from fastapi.responses import JSONResponse

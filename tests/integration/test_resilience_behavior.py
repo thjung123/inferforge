@@ -59,9 +59,9 @@ def test_circuit_breaker_opens_and_recovers(monkeypatch):
         assert r.status_code in (500, 503)
 
     blocked = requests.get(ok_url, headers=HEADERS)
-    assert (
-        blocked.status_code == 503
-    ), f"Expected breaker open (503), got {blocked.status_code}"
+    assert blocked.status_code == 503, (
+        f"Expected breaker open (503), got {blocked.status_code}"
+    )
 
     time.sleep(3)
     recovered = requests.get(ok_url, headers=HEADERS)

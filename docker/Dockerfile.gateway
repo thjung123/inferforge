@@ -4,14 +4,9 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir uv
 COPY pyproject.toml ./
-RUN uv pip install --system .
-
-RUN pip install --no-cache-dir "tritonclient[grpc]==2.61.0" --no-deps \
-    && pip install --no-cache-dir grpcio protobuf python-rapidjson
-
+RUN uv pip install --system -r pyproject.toml
 
 COPY gateway ./gateway
-COPY builder ./builder
 COPY common ./common
 
 ENV WORKERS=1

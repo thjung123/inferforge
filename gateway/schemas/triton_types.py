@@ -1,11 +1,11 @@
 from pydantic import BaseModel
-from typing import Any, Dict
+from typing import Any
 
 
 class TritonInferRequest(BaseModel):
     model_name: str
-    inputs: Dict[str, Any]
+    inputs: dict[str, Any]
 
 
 class TritonInferResponse(BaseModel):
-    raw_outputs: Dict[str, Any]
+    raw_outputs: dict[str, Any]

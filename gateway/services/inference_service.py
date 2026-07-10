@@ -1,3 +1,4 @@
+from typing import Annotated
 import time
 
 import numpy as np
@@ -21,11 +22,11 @@ class InferenceService:
             raise InvalidInputError("Input data is empty")
 
         logger.info(f"Starting inference | model={model_name}")
-        start_time = time.time()
+        start_time = time.monotonic()
 
         raw_result = await self.client.infer(model_name, inputs, output_names)
 
-        duration = time.time() - start_time
+        duration = time.monotonic() - start_time
         logger.info(
             f"Inference completed | model={model_name}, duration={duration:.3f}s, "
             f"result_keys={list(raw_result.keys())}"
@@ -34,6 +35,6 @@ class InferenceService:
 
 
 def get_inference_service(
-    client: TritonClient = Depends(get_triton_client),
+    client: Annotated[TritonClient, Depends(get_triton_client)],
 ) -> InferenceService:
     return InferenceService(client)

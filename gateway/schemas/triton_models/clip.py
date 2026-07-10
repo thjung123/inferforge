@@ -1,11 +1,11 @@
 import numpy as np
 from pydantic import BaseModel
-from typing import List, ClassVar
+from typing import ClassVar
 
 
 class ClipRequest(BaseModel):
-    IMAGE_URLS: List[str]
-    TEXTS: List[str]
+    IMAGE_URLS: list[str]
+    TEXTS: list[str]
     OUTPUT_NAMES: ClassVar[list[str]] = ["similarity"]
 
     def to_triton_inputs(self) -> list[dict]:

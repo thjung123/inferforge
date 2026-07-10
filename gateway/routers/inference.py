@@ -1,3 +1,4 @@
+from typing import Annotated
 import asyncio
 import time
 
@@ -39,7 +40,7 @@ async def _ensure_loaded(model_name: str) -> None:
 @router.post("/", response_model=None)
 async def infer(
     req: InferenceRequest,
-    service: InferenceService = Depends(get_inference_service),
+    service: Annotated[InferenceService, Depends(get_inference_service)],
 ):
     tiering_on = get_settings().enable_tiering
 

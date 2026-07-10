@@ -1,3 +1,4 @@
+from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from gateway.schemas.lora import LoRAAdapterResponse, LoRARegisterRequest
@@ -10,7 +11,7 @@ router = APIRouter()
 @router.post("/register", response_model=LoRAAdapterResponse)
 async def register(
     req: LoRARegisterRequest,
-    registry: LoRARegistryService = Depends(get_lora_registry),
+    registry: Annotated[LoRARegistryService, Depends(get_lora_registry)],
 ):
     adapter = await registry.register_adapter_atomic(
         req.name, req.base_model, req.s3_path
@@ -28,7 +29,7 @@ async def register(
 @router.delete("/{name}")
 async def remove(
     name: str,
-    registry: LoRARegistryService = Depends(get_lora_registry),
+    registry: Annotated[LoRARegistryService, Depends(get_lora_registry)],
 ):
     deleted = await registry.remove_adapter(name)
     if not deleted:
@@ -38,7 +39,7 @@ async def remove(
 
 @router.get("", response_model=list[LoRAAdapterResponse])
 async def list_all(
-    registry: LoRARegistryService = Depends(get_lora_registry),
+    registry: Annotated[LoRARegistryService, Depends(get_lora_registry)],
 ):
     adapters = await registry.list_adapters()
     return [
@@ -56,7 +57,7 @@ async def list_all(
 @router.get("/{name}", response_model=LoRAAdapterResponse)
 async def get(
     name: str,
-    registry: LoRARegistryService = Depends(get_lora_registry),
+    registry: Annotated[LoRARegistryService, Depends(get_lora_registry)],
 ):
     adapter = await registry.get_adapter(name)
     if not adapter:

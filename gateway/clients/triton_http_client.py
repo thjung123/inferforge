@@ -8,7 +8,6 @@ from gateway.utils.logger import gateway_logger as logger
 
 
 class TritonHttpClient:
-
     def __init__(self):
         settings = get_settings()
         self._base_url = settings.triton_http_url.rstrip("/")
