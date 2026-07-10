@@ -12,7 +12,6 @@ class SafeJsonFormatter(json.JsonFormatter):
 
 def setup_logger(scope: str, level=logging.INFO) -> logging.Logger:
     logger = logging.getLogger(f"gateway.{scope}")
-    gunicorn_logger = logging.getLogger("gunicorn.access")
 
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
@@ -24,8 +23,7 @@ def setup_logger(scope: str, level=logging.INFO) -> logging.Logger:
         logger.addHandler(handler)
         logger.setLevel(level)
 
-        logger.parent = gunicorn_logger
-        logger.propagate = True
+        logger.propagate = False
 
     return logger
 

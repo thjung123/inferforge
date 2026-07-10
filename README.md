@@ -183,7 +183,7 @@ uv run pytest tests/integration   # needs Docker
 
 ## Stack
 
-FastAPI / Gunicorn, NVIDIA Triton + TensorRT, vLLM, ONNX, Redis, MinIO, Docker.
+FastAPI / Uvicorn, NVIDIA Triton + TensorRT, vLLM, ONNX, Redis, MinIO, Docker.
 
 ## Operations
 
@@ -222,7 +222,7 @@ throttle open, so requests still serve while rate limiting is paused.
   is set (an empty secret disables JWT while leaving API-key auth active), and JWTs
   must carry an `exp`.
 - The adaptive limiters, circuit breakers, and `/infer` semaphore are in-process
-  and assume a single Gunicorn worker; a multi-worker/multi-pod setup would move
+  and assume a single Uvicorn worker; a multi-worker/multi-pod setup would move
   this state to Redis (rate limiting already lives there).
 - The LoRA registry uses Redis + MinIO. In production you'd back it with a
   persistent registry (MLflow, Vertex AI) and S3/GCS.
