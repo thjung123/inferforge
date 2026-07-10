@@ -118,7 +118,7 @@ def reload_model(model_name=MODEL_NAME, max_retries=3):
         print(f"[WARN] Unload failed: {e}")
 
     for i in range(max_retries):
-        print(f"[SAFE RELOAD] Attempt {i+1}")
+        print(f"[SAFE RELOAD] Attempt {i + 1}")
         time.sleep(2)
         try:
             r = requests.post(url_load, timeout=10)
@@ -183,7 +183,6 @@ def main():
                         else f"{exp_name}_no_dynamic"
                     )
 
-                    # Update config and reload
                     for path in CONFIG_PATHS:
                         p = Path(path)
                         backup_config(p)
@@ -202,7 +201,6 @@ def main():
                             )
                             run_perf_analyzer(batch=batch, concurrency=conc, tag=tag)
 
-                    # Restore after each block
                     for path in CONFIG_PATHS:
                         restore_config(Path(path))
                     reload_model()
