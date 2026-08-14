@@ -83,62 +83,6 @@ services:
       timeout: 5s
       retries: 3
 
-  vllm-primary:
-    container_name: vllm-primary
-    image: vllm/vllm-openai:v0.24.0
-    command:
-      - "--model"
-      - "${VLLM_PRIMARY_MODEL:-Qwen/Qwen2.5-7B-Instruct}"
-      - "--host"
-      - "0.0.0.0"
-      - "--port"
-      - "8100"
-      - "--max-model-len"
-      - "${VLLM_PRIMARY_MAX_MODEL_LEN:-4096}"
-      - "--enable-lora"
-    environment:
-      - VLLM_ALLOW_RUNTIME_LORA_UPDATING=True
-    volumes:
-      - hf_cache:/root/.cache/huggingface
-      - lora_adapters:/adapters
-    shm_size: 4g
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    expose:
-      - "8100"
-
-  vllm-fallback:
-    container_name: vllm-fallback
-    image: vllm/vllm-openai:v0.24.0
-    command:
-      - "--model"
-      - "${VLLM_FALLBACK_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}"
-      - "--host"
-      - "0.0.0.0"
-      - "--port"
-      - "8101"
-      - "--max-model-len"
-      - "${VLLM_FALLBACK_MAX_MODEL_LEN:-4096}"
-    environment:
-      - VLLM_ALLOW_RUNTIME_LORA_UPDATING=True
-    volumes:
-      - hf_cache:/root/.cache/huggingface
-    shm_size: 2g
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    expose:
-      - "8101"
-
   gateway:
     container_name: gateway
     build:
@@ -153,13 +97,9 @@ services:
       - TRITON_URL=triton:8001
       - TRITON_HTTP_URL=http://triton:8000
       - BUILDER_URL=http://builder:8090
-      - VLLM_PRIMARY_URL=http://vllm-primary:8100
-      - VLLM_FALLBACK_URL=http://vllm-fallback:8101
     depends_on:
       - redis
       - triton
-      - vllm-primary
-      - vllm-fallback
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
       interval: 30s
@@ -167,29 +107,6 @@ services:
       retries: 3
     restart: unless-stopped
 
-  lora-sync:
-    container_name: lora-sync
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.lora-sync
-    environment:
-      - REDIS_URL=redis://redis:6379/0
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_BUCKET=lora-adapters
-      - VLLM_URL=http://vllm-primary:8100
-      - ADAPTER_DIR=/adapters
-    volumes:
-      - lora_adapters:/adapters
-    depends_on:
-      - redis
-      - minio
-      - vllm-primary
-    restart: unless-stopped
-
 volumes:
-  hf_cache:
   minio_data:
-  lora_adapters:
   redis_data:

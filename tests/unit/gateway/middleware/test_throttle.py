@@ -15,13 +15,6 @@ def test_select_breaker_infer():
     assert _select_breaker("/infer/") == "triton"
 
 
-def test_select_breaker_generate():
-    # /generate is owned by the router (graceful degradation), so the
-    # circuit-breaker middleware skips it rather than short-circuiting to 503.
-    assert _select_breaker("/generate") is None
-    assert _select_breaker("/generate/stream") is None
-
-
 def test_select_breaker_other():
     assert _select_breaker("/health") == "global"
     assert _select_breaker("/models") == "global"
@@ -33,10 +26,6 @@ def test_select_breaker_other():
 def test_get_endpoint_infer():
     assert _get_endpoint("/infer") == "infer"
     assert _get_endpoint("/infer/something") == "infer"
-
-
-def test_get_endpoint_generate():
-    assert _get_endpoint("/generate") == "generate"
 
 
 def test_get_endpoint_not_throttled():

@@ -37,7 +37,7 @@ end
 
 _semaphores: dict[str, asyncio.Semaphore] = {}
 
-_THROTTLE_PATHS = {"/infer", "/generate"}
+_THROTTLE_PATHS = {"/infer"}
 
 
 def _get_endpoint(path: str) -> str | None:
@@ -56,8 +56,6 @@ def _get_semaphore(endpoint: str) -> asyncio.Semaphore:
 
 def _get_rate_config(endpoint: str) -> tuple[int, int]:
     settings = get_settings()
-    if endpoint == "generate":
-        return settings.rate_limit_generate, settings.rate_window
     return settings.rate_limit_infer, settings.rate_window
 
 
@@ -113,24 +111,21 @@ async def throttle_middleware(request: Request, call_next) -> Response:
             },
         )
 
-    if endpoint == "generate":
+    sem = _get_semaphore(endpoint)
+    if sem.locked():
+        logger.warning(
+            f"[Throttle] Concurrency limit reached: {endpoint} client={client_ip}"
+        )
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Server busy, too many concurrent requests",
+                "endpoint": endpoint,
+            },
+            headers={"Retry-After": "1"},
+        )
+    async with sem:
         response = await call_next(request)
-    else:
-        sem = _get_semaphore(endpoint)
-        if sem.locked():
-            logger.warning(
-                f"[Throttle] Concurrency limit reached: {endpoint} client={client_ip}"
-            )
-            return JSONResponse(
-                status_code=503,
-                content={
-                    "error": "Server busy, too many concurrent requests",
-                    "endpoint": endpoint,
-                },
-                headers={"Retry-After": "1"},
-            )
-        async with sem:
-            response = await call_next(request)
 
     if remaining >= 0:
         response.headers["X-RateLimit-Limit"] = str(limit)

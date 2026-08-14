@@ -7,7 +7,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from gateway.config import get_settings
 from gateway.middlewares.circuit_breaker.middleware import circuit_breaker_middleware
-from gateway.routers import generate, health, inference, lora, models, version
+from gateway.routers import health, inference, models, version
 from gateway.routers.version import APP_VERSION
 from gateway.middlewares.request_id import add_request_id
 from gateway.middlewares.auth import auth_middleware
@@ -16,7 +16,6 @@ from gateway.middlewares.metrics import metrics_middleware
 from gateway.clients.builder_client import get_builder_client
 from gateway.clients.redis_client import RedisClient, get_redis_client
 from gateway.clients.triton_http_client import get_triton_http_client
-from gateway.clients.vllm_client import get_vllm_fallback, get_vllm_primary
 from gateway.utils.exceptions import register_exception_handlers
 from gateway.utils.logger import gateway_logger as logger
 
@@ -42,8 +41,6 @@ async def lifespan(app: FastAPI):
             await reaper_task
     await get_builder_client().close()
     await get_triton_http_client().close()
-    await get_vllm_primary().close()
-    await get_vllm_fallback().close()
     await RedisClient.close()
 
 
@@ -56,8 +53,6 @@ app = FastAPI(
 app.include_router(health.router, prefix="/health", tags=["Health"])
 app.include_router(inference.router, prefix="/infer", tags=["Inference"])
 app.include_router(models.router, prefix="/models", tags=["Models"])
-app.include_router(generate.router, prefix="/generate", tags=["Generate"])
-app.include_router(lora.router, prefix="/lora", tags=["LoRA"])
 app.include_router(version.router, prefix="/version", tags=["Version"])
 
 

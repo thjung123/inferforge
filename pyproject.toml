@@ -1,7 +1,7 @@
 [project]
 name = "inferforge"
 version = "0.1.0"
-description = "Self-hosted inference stack: FastAPI gateway, Triton/TensorRT embeddings, vLLM generation with multi-LoRA"
+description = "Self-hosted inference stack for Triton/TensorRT embedding and vision models"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

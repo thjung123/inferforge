@@ -8,7 +8,7 @@ API_KEY = "test-key"
 TEXTS = [
     "Artificial intelligence is transforming the world.",
     "The quick brown fox jumps over the lazy dog.",
-    "A large language model trained on diverse data.",
+    "A sentence used to test semantic similarity.",
     "The cat sat on the mat.",
     "Machine learning enables predictive analytics.",
 ]
